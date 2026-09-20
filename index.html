@@ -1,0 +1,2801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Services — Live Workflow Prototype & Proposal</title>
+<meta name="description" content="Interactive prototype of a home services booking platform: customer portal, staff dashboard, owner controls, slot locking and role-based permissions. Angular + .NET.">
+<style>
+/* ============================================================
+   1. PROPOSAL PAGE TOKENS
+   ============================================================ */
+:root{
+  --bg:#05080f;
+  --panel:rgba(255,255,255,.045);
+  --panel-2:rgba(255,255,255,.028);
+  --brd:rgba(255,255,255,.10);
+  --brd-strong:rgba(255,255,255,.18);
+  --text:#eaf0fb;
+  --muted:#93a4c4;
+  --dim:#64748b;
+
+  --sky:#38bdf8;
+  --cyan:#22d3ee;
+  --emerald:#34d399;
+  --amber:#fbbf24;
+  --violet:#a78bfa;
+  --rose:#fb7185;
+
+  --grad-main:linear-gradient(115deg,#38bdf8 0%,#22d3ee 48%,#34d399 100%);
+  --grad-violet:linear-gradient(115deg,#a78bfa,#38bdf8);
+  --grad-warm:linear-gradient(115deg,#fbbf24,#fb7185);
+
+  --radius:20px;
+  --radius-sm:14px;
+  --maxw:1200px;
+}
+
+/* ============================================================
+   2. APP (LIGHT) TOKENS — the product itself
+   ============================================================ */
+:root{
+  --a-bg:#f5f7fb;
+  --a-surface:#ffffff;
+  --a-brd:#e4eaf3;
+  --a-brd-2:#d3dced;
+  --a-text:#0f172a;
+  --a-muted:#64748b;
+  --a-dim:#94a3b8;
+  --a-primary:#0284c7;
+  --a-primary-soft:#e0f2fe;
+  --a-green:#059669;
+  --a-green-soft:#d1fae5;
+  --a-amber:#b45309;
+  --a-amber-soft:#fef3c7;
+  --a-red:#dc2626;
+  --a-red-soft:#fee2e2;
+  --a-violet:#7c3aed;
+  --a-violet-soft:#ede9fe;
+  --a-shadow:0 1px 2px rgba(15,23,42,.05),0 4px 12px -4px rgba(15,23,42,.08);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.6;font-size:16px;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+
+/* ============================================================
+   3. BACKGROUND FX
+   ============================================================ */
+.bg-fx{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg-fx::after{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(920px 540px at 10% -6%, rgba(56,189,248,.16), transparent 60%),
+    radial-gradient(840px 540px at 94% 6%, rgba(52,211,153,.13), transparent 62%),
+    radial-gradient(920px 640px at 48% 108%, rgba(167,139,250,.11), transparent 66%);
+}
+.orb{position:absolute;border-radius:50%;filter:blur(95px);opacity:.45}
+.orb.a{width:540px;height:540px;background:#0369a1;top:-180px;left:-150px;animation:float1 24s ease-in-out infinite}
+.orb.b{width:470px;height:470px;background:#0f766e;top:14%;right:-170px;animation:float2 27s ease-in-out infinite}
+.orb.c{width:430px;height:430px;background:#5b21b6;bottom:-170px;left:32%;animation:float3 31s ease-in-out infinite}
+@keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(84px,62px)}}
+@keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-72px,92px)}}
+@keyframes float3{0%,100%{transform:translate(0,0)}50%{transform:translate(64px,-72px)}}
+.grid-lines{
+  position:absolute;inset:0;opacity:.3;
+  background-image:
+    linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:66px 66px;
+  mask-image:radial-gradient(ellipse 92% 62% at 50% 0%,#000 18%,transparent 78%);
+  -webkit-mask-image:radial-gradient(ellipse 92% 62% at 50% 0%,#000 18%,transparent 78%);
+}
+
+/* ============================================================
+   4. PROGRESS + LAYOUT
+   ============================================================ */
+#progress{position:fixed;top:0;left:0;height:3px;width:0%;z-index:200;background:var(--grad-main);box-shadow:0 0 18px rgba(56,189,248,.8);transition:width .1s linear}
+.shell{position:relative;z-index:2}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+section{position:relative;z-index:2}
+.sec{padding:64px 0}
+
+/* ============================================================
+   5. TOPBAR
+   ============================================================ */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  background:rgba(5,8,15,.76);border-bottom:1px solid rgba(255,255,255,.07);
+}
+.topbar-in{display:flex;align-items:center;justify-content:space-between;gap:16px;height:66px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:.95rem;letter-spacing:-.01em}
+.brand-mark{
+  width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;
+  background:var(--grad-main);color:#04121a;font-weight:900;font-size:1.05rem;
+  box-shadow:0 8px 24px -6px rgba(56,189,248,.75);
+}
+.brand small{display:block;font-weight:500;color:var(--muted);font-size:.71rem;letter-spacing:.07em;text-transform:uppercase}
+.top-nav{display:flex;gap:6px}
+.top-nav a{padding:8px 14px;border-radius:999px;font-size:.85rem;font-weight:600;color:var(--muted);transition:.2s}
+.top-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.top-cta{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:999px;
+  font-size:.86rem;font-weight:700;background:var(--grad-main);color:#04121a;
+  box-shadow:0 10px 28px -10px rgba(56,189,248,.9);transition:.25s;
+}
+.top-cta:hover{transform:translateY(-2px)}
+
+/* ============================================================
+   6. HERO
+   ============================================================ */
+.hero{padding:66px 0 40px;text-align:center}
+.hero .keyword{
+  display:inline-flex;align-items:center;gap:10px;padding:9px 18px;border-radius:999px;
+  background:linear-gradient(115deg,rgba(56,189,248,.16),rgba(52,211,153,.12));
+  border:1px solid rgba(56,189,248,.38);color:#bfe9ff;
+  font-size:.84rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px;
+}
+.keyword .kw-dot{width:8px;height:8px;border-radius:50%;background:var(--emerald);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.7)}70%{box-shadow:0 0 0 12px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+h1{font-size:clamp(2rem,4.6vw,3.5rem);line-height:1.06;letter-spacing:-.034em;font-weight:800;margin:0 auto 20px;max-width:880px}
+h1 .grad{background:var(--grad-main);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lede{font-size:1.08rem;color:var(--muted);max-width:680px;margin:0 auto 30px}
+.hero .lede strong{color:var(--text);font-weight:600}
+.hero-btns{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:18px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  padding:14px 26px;border-radius:999px;font-weight:700;font-size:.92rem;
+  border:1px solid transparent;transition:.25s;
+}
+.btn-primary{background:var(--grad-main);color:#04121a;box-shadow:0 16px 40px -14px rgba(56,189,248,.95)}
+.btn-primary:hover{transform:translateY(-3px)}
+.btn-ghost{background:rgba(255,255,255,.045);border-color:var(--brd-strong);color:var(--text)}
+.btn-ghost:hover{background:rgba(255,255,255,.09);transform:translateY(-3px)}
+.hero-note{font-size:.84rem;color:var(--dim)}
+.hero-note b{color:var(--muted)}
+
+/* ============================================================
+   7. SECTION HEADINGS
+   ============================================================ */
+.sec-head{max-width:760px;margin-bottom:38px}
+.sec-tag{display:inline-block;font-size:.73rem;font-weight:800;letter-spacing:.17em;text-transform:uppercase;color:var(--sky);margin-bottom:12px}
+.sec-tag.em{color:var(--emerald)}
+.sec-tag.am{color:var(--amber)}
+.sec-tag.vi{color:var(--violet)}
+h2{font-size:clamp(1.6rem,3.2vw,2.4rem);line-height:1.14;letter-spacing:-.027em;font-weight:800;margin:0 0 14px}
+.sec-head p{color:var(--muted);margin:0;font-size:1.01rem}
+.center{text-align:center;margin-left:auto;margin-right:auto}
+
+/* ============================================================
+   8. ROLE SWITCHER
+   ============================================================ */
+.role-bar{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  flex-wrap:wrap;margin-bottom:20px;
+}
+.role-label{font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.role-switch{
+  display:inline-flex;padding:5px;gap:4px;border-radius:999px;
+  background:rgba(255,255,255,.05);border:1px solid var(--brd);
+}
+.role-btn{
+  padding:9px 20px;border-radius:999px;font-size:.85rem;font-weight:700;
+  color:var(--muted);transition:.25s;display:inline-flex;align-items:center;gap:7px;
+}
+.role-btn:hover{color:var(--text)}
+.role-btn.on{background:var(--grad-main);color:#04121a;box-shadow:0 8px 22px -8px rgba(56,189,248,.9)}
+.role-hint{font-size:.8rem;color:var(--dim);text-align:center;margin-bottom:24px}
+.role-hint b{color:var(--sky)}
+
+/* ============================================================
+   9. APP SHELL — the live product
+   ============================================================ */
+.app-frame{
+  border-radius:24px;padding:2px;
+  background:linear-gradient(140deg,rgba(56,189,248,.55),rgba(52,211,153,.28),rgba(167,139,250,.5));
+  box-shadow:0 50px 120px -46px rgba(56,189,248,.5);
+}
+.app-shell{
+  display:grid;grid-template-columns:242px 1fr;
+  min-height:720px;max-height:860px;
+  background:var(--a-bg);border-radius:22px;overflow:hidden;
+  color:var(--a-text);font-size:14px;line-height:1.5;
+}
+
+/* ---- sidebar ---- */
+.app-side{
+  background:var(--a-surface);border-right:1px solid var(--a-brd);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+.as-user{padding:18px 16px;border-bottom:1px solid var(--a-brd);display:flex;align-items:center;gap:11px}
+.as-av{
+  width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;
+  font-size:.82rem;font-weight:800;color:#fff;
+  background:linear-gradient(140deg,#0ea5e9,#22d3ee);
+}
+.as-user-info{min-width:0;flex:1}
+.as-user-info b{display:block;font-size:.86rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.as-user-info span{display:block;font-size:.73rem;color:var(--a-muted)}
+.as-role{
+  font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;background:var(--a-primary-soft);color:var(--a-primary);
+}
+.as-role.owner{background:var(--a-violet-soft);color:var(--a-violet)}
+.as-role.staff{background:var(--a-green-soft);color:var(--a-green)}
+.as-role.customer{background:var(--a-primary-soft);color:var(--a-primary)}
+
+.as-nav{padding:12px 10px;flex:1;display:flex;flex-direction:column;gap:3px}
+.as-nav-label{
+  font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--a-dim);padding:12px 10px 6px;
+}
+.as-item{
+  display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
+  font-size:.86rem;font-weight:600;color:var(--a-muted);transition:.18s;width:100%;text-align:left;
+}
+.as-item:hover{background:#f1f5fb;color:var(--a-text)}
+.as-item.on{background:var(--a-primary-soft);color:var(--a-primary);font-weight:700}
+.as-item .lock{margin-left:auto;opacity:.4}
+.as-foot{padding:14px;border-top:1px solid var(--a-brd)}
+.as-reset{
+  width:100%;padding:9px;border-radius:9px;font-size:.8rem;font-weight:600;
+  border:1px solid var(--a-brd-2);color:var(--a-muted);transition:.2s;
+}
+.as-reset:hover{background:#f1f5fb;color:var(--a-text)}
+
+/* ---- main ---- */
+.app-main{display:flex;flex-direction:column;overflow:hidden;background:var(--a-bg)}
+.am-top{
+  background:var(--a-surface);border-bottom:1px solid var(--a-brd);
+  padding:14px 24px;display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex:none;
+}
+.am-title{font-size:1.05rem;font-weight:800;letter-spacing:-.02em}
+.am-title span{display:block;font-size:.76rem;font-weight:500;color:var(--a-muted);letter-spacing:0}
+.am-tools{display:flex;align-items:center;gap:10px}
+.am-search{
+  display:flex;align-items:center;gap:8px;padding:8px 13px;border-radius:10px;
+  background:var(--a-bg);border:1px solid var(--a-brd);font-size:.82rem;color:var(--a-dim);
+  min-width:180px;
+}
+.am-search input{border:0;background:none;outline:none;font:inherit;color:var(--a-text);width:100%}
+.am-search input::placeholder{color:var(--a-dim)}
+.am-icon-btn{
+  width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  border:1px solid var(--a-brd);background:var(--a-surface);color:var(--a-muted);transition:.2s;
+}
+.am-icon-btn:hover{background:#f1f5fb;color:var(--a-text)}
+.am-view{flex:1;overflow-y:auto;padding:24px 26px 44px}
+
+/* ---- shared app components ---- */
+.a-page-head{margin-bottom:22px}
+.a-page-head h3{font-size:1.3rem;font-weight:800;letter-spacing:-.025em;margin:0 0 4px}
+.a-page-head p{margin:0;font-size:.86rem;color:var(--a-muted)}
+
+.a-card{
+  background:var(--a-surface);border:1px solid var(--a-brd);border-radius:14px;
+  box-shadow:var(--a-shadow);
+}
+.a-card-pad{padding:18px 20px}
+
+.a-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:9px 17px;border-radius:10px;font-size:.83rem;font-weight:700;transition:.2s;
+  border:1px solid transparent;
+}
+.a-btn-pri{background:var(--a-primary);color:#fff}
+.a-btn-pri:hover{background:#0369a1}
+.a-btn-pri:disabled{opacity:.45;cursor:not-allowed}
+.a-btn-out{background:var(--a-surface);border-color:var(--a-brd-2);color:var(--a-text)}
+.a-btn-out:hover{background:#f1f5fb}
+.a-btn-ok{background:var(--a-green);color:#fff}
+.a-btn-ok:hover{background:#047857}
+.a-btn-danger{background:var(--a-surface);border-color:var(--a-red-soft);color:var(--a-red)}
+.a-btn-danger:hover{background:var(--a-red-soft)}
+.a-btn-sm{padding:6px 12px;font-size:.78rem;border-radius:8px}
+.a-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.a-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:.68rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;
+}
+.a-badge.pending{background:var(--a-amber-soft);color:var(--a-amber)}
+.a-badge.confirmed{background:var(--a-primary-soft);color:var(--a-primary)}
+.a-badge.completed{background:var(--a-green-soft);color:var(--a-green)}
+.a-badge.cancelled{background:var(--a-red-soft);color:var(--a-red)}
+
+/* ---- services grid ---- */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+.svc-card{
+  display:flex;gap:14px;align-items:flex-start;text-align:left;padding:18px;
+  background:var(--a-surface);border:1px solid var(--a-brd);border-radius:14px;
+  box-shadow:var(--a-shadow);transition:.22s;
+}
+.svc-card:hover{transform:translateY(-3px);border-color:var(--a-primary);box-shadow:0 12px 28px -12px rgba(2,132,199,.4)}
+.svc-ico{
+  width:44px;height:44px;flex:none;border-radius:12px;display:grid;place-items:center;
+  font-size:1.25rem;background:var(--a-primary-soft);
+}
+.svc-body{flex:1;min-width:0}
+.svc-body b{display:block;font-size:.95rem;font-weight:700;margin-bottom:3px}
+.svc-body p{margin:0 0 8px;font-size:.8rem;color:var(--a-muted);line-height:1.45}
+.svc-meta{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--a-dim)}
+.svc-price{font-size:1rem;font-weight:800;color:var(--a-primary);white-space:nowrap}
+
+/* ---- stepper ---- */
+.stepper{display:flex;align-items:center;gap:0;margin-bottom:26px}
+.step{display:flex;align-items:center;gap:10px}
+.step-num{
+  width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  font-size:.78rem;font-weight:800;background:#e2e8f0;color:var(--a-muted);flex:none;
+}
+.step.on .step-num{background:var(--a-primary);color:#fff}
+.step.done .step-num{background:var(--a-green);color:#fff}
+.step-lbl{font-size:.82rem;font-weight:600;color:var(--a-muted)}
+.step.on .step-lbl{color:var(--a-text);font-weight:700}
+.step-line{flex:1;height:2px;background:#e2e8f0;margin:0 14px;min-width:20px}
+.step.done + .step-line{background:var(--a-green)}
+
+/* ---- date strip ---- */
+.date-strip{display:flex;gap:9px;overflow-x:auto;padding-bottom:6px;margin-bottom:20px}
+.date-chip{
+  flex:none;width:72px;padding:12px 6px;border-radius:12px;text-align:center;
+  background:var(--a-surface);border:1px solid var(--a-brd);transition:.2s;
+}
+.date-chip:hover{border-color:var(--a-primary)}
+.date-chip span{display:block;font-size:.7rem;font-weight:700;color:var(--a-dim);letter-spacing:.05em;text-transform:uppercase}
+.date-chip b{display:block;font-size:1.15rem;font-weight:800;margin:3px 0 1px;color:var(--a-text)}
+.date-chip.on{background:var(--a-primary);border-color:var(--a-primary)}
+.date-chip.on span,.date-chip.on b{color:#fff}
+.date-chip.on span{opacity:.85}
+
+/* ---- slots ---- */
+.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:20px}
+.slot-btn{
+  padding:13px 8px;border-radius:11px;text-align:center;font-size:.85rem;font-weight:700;
+  background:var(--a-surface);border:1.5px solid var(--a-brd);color:var(--a-text);transition:.18s;
+  position:relative;
+}
+.slot-btn:hover:not(:disabled){border-color:var(--a-primary);background:var(--a-primary-soft);color:var(--a-primary)}
+.slot-btn.on{background:var(--a-primary);border-color:var(--a-primary);color:#fff;box-shadow:0 0 0 4px rgba(2,132,199,.15)}
+.slot-btn:disabled{
+  background:#f1f5f9;border-color:#e2e8f0;color:#b6c2d4;cursor:not-allowed;
+  text-decoration:line-through;
+}
+.slot-note{font-size:.78rem;color:var(--a-muted);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.slot-note .dot-free{width:9px;height:9px;border-radius:3px;background:var(--a-green);display:inline-block}
+.slot-note .dot-taken{width:9px;height:9px;border-radius:3px;background:#cbd5e1;display:inline-block}
+
+/* ---- hold banner ---- */
+.hold-banner{
+  display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;
+  background:linear-gradient(115deg,#e0f2fe,#d1fae5);border:1px solid #bae6fd;
+  font-size:.83rem;font-weight:600;color:#075985;margin-bottom:18px;
+}
+.hold-banner b{font-variant-numeric:tabular-nums;color:#0369a1;font-size:.95rem}
+
+/* ---- form ---- */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.full{grid-column:1 / -1}
+.field label{font-size:.78rem;font-weight:700;color:var(--a-text)}
+.field label span{color:var(--a-red)}
+.field input,.field textarea,.field select{
+  padding:11px 13px;border-radius:10px;border:1.5px solid var(--a-brd);
+  font:inherit;font-size:.86rem;color:var(--a-text);background:var(--a-surface);
+  outline:none;transition:.18s;width:100%;
+}
+.field input:focus,.field textarea:focus,.field select:focus{
+  border-color:var(--a-primary);box-shadow:0 0 0 3px rgba(2,132,199,.12);
+}
+.field input.err,.field textarea.err{border-color:var(--a-red);box-shadow:0 0 0 3px rgba(220,38,38,.1)}
+.field .hint{font-size:.72rem;color:var(--a-dim)}
+.field .err-msg{font-size:.73rem;color:var(--a-red);font-weight:600;display:none}
+.field.has-err .err-msg{display:block}
+.field textarea{resize:vertical;min-height:78px;font-family:inherit}
+
+.upload-box{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:22px;border-radius:12px;border:1.5px dashed var(--a-brd-2);
+  background:#fafbfe;text-align:center;transition:.2s;cursor:pointer;
+}
+.upload-box:hover{border-color:var(--a-primary);background:var(--a-primary-soft)}
+.upload-box b{font-size:.84rem;font-weight:700}
+.upload-box span{font-size:.74rem;color:var(--a-muted)}
+
+.pay-row{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;
+  background:var(--a-surface);border:1.5px solid var(--a-brd);margin-top:4px;
+}
+.pay-row input{width:18px;height:18px;accent-color:var(--a-primary);flex:none}
+.pay-row .pay-txt{flex:1}
+.pay-row .pay-txt b{display:block;font-size:.86rem;font-weight:700}
+.pay-row .pay-txt span{display:block;font-size:.75rem;color:var(--a-muted)}
+
+.form-actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+
+/* ---- confirmation ---- */
+.confirm-box{text-align:center;padding:34px 20px}
+.confirm-ico{
+  width:72px;height:72px;border-radius:50%;display:grid;place-items:center;margin:0 auto 20px;
+  background:var(--a-green-soft);color:var(--a-green);
+}
+.confirm-box h3{font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin:0 0 8px}
+.confirm-box p{color:var(--a-muted);margin:0 auto 24px;max-width:420px;font-size:.9rem}
+.confirm-card{
+  max-width:440px;margin:0 auto 24px;text-align:left;padding:20px;
+  background:var(--a-surface);border:1px solid var(--a-brd);border-radius:14px;
+}
+.confirm-row{display:flex;justify-content:space-between;gap:14px;padding:9px 0;font-size:.86rem}
+.confirm-row + .confirm-row{border-top:1px solid var(--a-brd)}
+.confirm-row span{color:var(--a-muted)}
+.confirm-row b{font-weight:700;text-align:right}
+
+/* ---- booking cards (customer) ---- */
+.tab-row{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--a-brd)}
+.tab{
+  padding:10px 16px;font-size:.85rem;font-weight:700;color:var(--a-muted);
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:.2s;
+}
+.tab.on{color:var(--a-primary);border-color:var(--a-primary)}
+.tab:hover{color:var(--a-text)}
+
+.bk-card{
+  display:flex;gap:16px;align-items:flex-start;padding:18px 20px;
+  background:var(--a-surface);border:1px solid var(--a-brd);border-radius:14px;
+  box-shadow:var(--a-shadow);margin-bottom:12px;
+}
+.bk-when{
+  width:74px;flex:none;text-align:center;padding:10px 6px;border-radius:11px;
+  background:var(--a-primary-soft);
+}
+.bk-when b{display:block;font-size:1.3rem;font-weight:800;color:var(--a-primary);line-height:1}
+.bk-when span{display:block;font-size:.68rem;font-weight:700;color:var(--a-primary);letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
+.bk-when em{display:block;font-style:normal;font-size:.72rem;font-weight:700;color:var(--a-muted);margin-top:4px}
+.bk-info{flex:1;min-width:0}
+.bk-info h4{margin:0 0 4px;font-size:.98rem;font-weight:700}
+.bk-info .bk-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:.79rem;color:var(--a-muted);margin-bottom:8px}
+.bk-info .bk-meta span{display:inline-flex;align-items:center;gap:5px}
+.bk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+/* ---- dashboard ---- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
+.stat-card{
+  padding:18px;border-radius:14px;background:var(--a-surface);
+  border:1px solid var(--a-brd);box-shadow:var(--a-shadow);
+}
+.stat-card .sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.stat-card .sc-ico{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+}
+.stat-card .sc-ico.blue{background:var(--a-primary-soft);color:var(--a-primary)}
+.stat-card .sc-ico.amber{background:var(--a-amber-soft);color:var(--a-amber)}
+.stat-card .sc-ico.green{background:var(--a-green-soft);color:var(--a-green)}
+.stat-card .sc-ico.violet{background:var(--a-violet-soft);color:var(--a-violet)}
+.stat-card .sc-lbl{font-size:.73rem;font-weight:700;color:var(--a-muted);letter-spacing:.05em;text-transform:uppercase}
+.stat-card .sc-val{font-size:1.75rem;font-weight:800;letter-spacing:-.035em;line-height:1.1}
+.stat-card .sc-sub{font-size:.75rem;color:var(--a-dim);margin-top:3px}
+.stat-card .sc-sub.up{color:var(--a-green);font-weight:600}
+
+.dash-cols{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+.panel{background:var(--a-surface);border:1px solid var(--a-brd);border-radius:14px;box-shadow:var(--a-shadow);overflow:hidden}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:15px 18px;border-bottom:1px solid var(--a-brd);
+}
+.panel-head b{font-size:.9rem;font-weight:700}
+.panel-head span{font-size:.74rem;color:var(--a-dim);font-weight:600}
+.panel-body{padding:6px 0}
+
+/* ---- list rows ---- */
+.row{
+  display:flex;align-items:center;gap:13px;padding:13px 18px;
+  border-bottom:1px solid var(--a-brd);transition:.16s;
+}
+.row:last-child{border-bottom:0}
+.row:hover{background:#f8fafd}
+.row-av{
+  width:36px;height:36px;flex:none;border-radius:10px;display:grid;place-items:center;
+  font-size:.75rem;font-weight:800;color:#fff;
+}
+.row-av.c1{background:linear-gradient(140deg,#0ea5e9,#22d3ee)}
+.row-av.c2{background:linear-gradient(140deg,#10b981,#22d3ee)}
+.row-av.c3{background:linear-gradient(140deg,#f59e0b,#fb7185)}
+.row-av.c4{background:linear-gradient(140deg,#8b5cf6,#0ea5e9)}
+.row-info{flex:1;min-width:0}
+.row-info b{display:block;font-size:.86rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-info span{display:block;font-size:.75rem;color:var(--a-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-right{display:flex;align-items:center;gap:8px;flex:none}
+
+/* ---- table ---- */
+.tbl-wrap{overflow-x:auto}
+table.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
+table.tbl th{
+  text-align:left;padding:11px 16px;font-size:.7rem;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--a-dim);
+  background:#fafbfe;border-bottom:1px solid var(--a-brd);white-space:nowrap;
+}
+table.tbl td{padding:13px 16px;border-bottom:1px solid var(--a-brd);vertical-align:middle}
+table.tbl tr:last-child td{border-bottom:0}
+table.tbl tbody tr:hover{background:#f8fafd}
+.cell-cust{display:flex;align-items:center;gap:10px}
+.cell-cust .cc-av{
+  width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;
+  font-size:.68rem;font-weight:800;color:#fff;background:linear-gradient(140deg,#0ea5e9,#22d3ee);
+}
+.cell-cust b{display:block;font-size:.84rem;font-weight:700}
+.cell-cust span{display:block;font-size:.73rem;color:var(--a-muted)}
+.cell-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.filter-btn{
+  padding:7px 14px;border-radius:999px;font-size:.8rem;font-weight:600;
+  background:var(--a-surface);border:1px solid var(--a-brd);color:var(--a-muted);transition:.18s;
+}
+.filter-btn:hover{border-color:var(--a-primary);color:var(--a-primary)}
+.filter-btn.on{background:var(--a-primary);border-color:var(--a-primary);color:#fff}
+
+/* ---- calendar ---- */
+.cal-wrap{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;min-width:760px}
+.cal-col{background:var(--a-surface);border:1px solid var(--a-brd);border-radius:12px;overflow:hidden;min-height:260px}
+.cal-col-head{padding:10px 10px;text-align:center;border-bottom:1px solid var(--a-brd);background:#fafbfe}
+.cal-col-head span{display:block;font-size:.68rem;font-weight:800;color:var(--a-dim);letter-spacing:.07em;text-transform:uppercase}
+.cal-col-head b{display:block;font-size:1.05rem;font-weight:800;margin-top:1px}
+.cal-col.today .cal-col-head{background:var(--a-primary-soft)}
+.cal-col.today .cal-col-head b{color:var(--a-primary)}
+.cal-items{padding:8px;display:flex;flex-direction:column;gap:7px}
+.cal-item{
+  padding:8px 9px;border-radius:9px;font-size:.72rem;line-height:1.35;
+  border-left:3px solid var(--a-primary);background:var(--a-primary-soft);
+}
+.cal-item b{display:block;font-weight:700;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-item span{display:block;color:var(--a-muted);font-size:.7rem}
+.cal-item.pending{border-color:#f59e0b;background:var(--a-amber-soft)}
+.cal-item.completed{border-color:#10b981;background:var(--a-green-soft)}
+.cal-item.cancelled{border-color:#ef4444;background:var(--a-red-soft);opacity:.6}
+.cal-empty{padding:20px 8px;text-align:center;font-size:.74rem;color:var(--a-dim)}
+
+/* ---- reschedule modal ---- */
+.resched-modal{
+  width:100%;max-width:560px;background:var(--a-surface);border-radius:18px;
+  padding:0;box-shadow:0 40px 90px -20px rgba(0,0,0,.6);overflow:hidden;
+  animation:modalIn .3s cubic-bezier(.2,.9,.3,1);color:var(--a-text);
+}
+.resched-head{
+  padding:22px 26px 16px;border-bottom:1px solid var(--a-brd);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+}
+.resched-head h3{margin:0 0 4px;font-size:1.15rem;font-weight:800;letter-spacing:-.02em}
+.resched-head p{margin:0;font-size:.84rem;color:var(--a-muted)}
+.resched-close{
+  width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  color:var(--a-muted);transition:.2s;flex:none;
+}
+.resched-close:hover{background:#f1f5fb;color:var(--a-text)}
+.resched-body{padding:22px 26px 26px}
+.resched-section-label{
+  font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--a-dim);margin-bottom:12px;
+}
+.resched-date-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:20px}
+.resched-date{
+  flex:none;width:64px;padding:10px 5px;border-radius:10px;text-align:center;
+  background:var(--a-surface);border:1.5px solid var(--a-brd);transition:.18s;
+}
+.resched-date:hover{border-color:var(--a-primary);background:var(--a-primary-soft)}
+.resched-date span{display:block;font-size:.66rem;font-weight:700;color:var(--a-dim);letter-spacing:.05em;text-transform:uppercase}
+.resched-date b{display:block;font-size:1.05rem;font-weight:800;margin:2px 0 0}
+.resched-date.on{background:var(--a-primary);border-color:var(--a-primary);color:#fff}
+.resched-date.on span{color:#fff;opacity:.85}
+.resched-date.past{opacity:.35;cursor:not-allowed;pointer-events:none}
+
+.resched-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;margin-bottom:8px}
+.resched-slot{
+  padding:11px 6px;border-radius:10px;text-align:center;font-size:.82rem;font-weight:700;
+  background:var(--a-surface);border:1.5px solid var(--a-brd);color:var(--a-text);transition:.18s;
+}
+.resched-slot:hover:not(:disabled){border-color:var(--a-primary);background:var(--a-primary-soft);color:var(--a-primary)}
+.resched-slot.on{background:var(--a-primary);border-color:var(--a-primary);color:#fff;box-shadow:0 0 0 4px rgba(2,132,199,.15)}
+.resched-slot:disabled{
+  background:#f1f5f9;border-color:#e2e8f0;color:#b6c2d4;cursor:not-allowed;text-decoration:line-through;
+}
+.resched-summary{
+  margin-top:18px;padding:14px 16px;border-radius:12px;
+  background:linear-gradient(115deg,#e0f2fe,#d1fae5);border:1px solid #bae6fd;
+  font-size:.84rem;font-weight:600;color:#075985;display:flex;align-items:center;gap:12px;
+}
+.resched-summary b{color:#0369a1}
+.resched-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+
+/* ---- permission denied ---- */
+.denied{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:70px 24px;gap:16px;
+}
+.denied-ico{
+  width:70px;height:70px;border-radius:50%;display:grid;place-items:center;
+  background:var(--a-red-soft);color:var(--a-red);
+}
+.denied h3{margin:0;font-size:1.25rem;font-weight:800}
+.denied p{margin:0;color:var(--a-muted);font-size:.88rem;max-width:400px}
+.denied code{
+  display:inline-block;padding:4px 9px;border-radius:6px;background:#f1f5f9;
+  font-size:.78rem;color:var(--a-red);font-weight:700;font-family:ui-monospace,monospace;
+}
+
+/* ---- role notice ---- */
+.role-notice{
+  display:flex;align-items:center;gap:11px;padding:12px 16px;border-radius:12px;
+  background:var(--a-violet-soft);border:1px solid #ddd6fe;
+  font-size:.82rem;font-weight:600;color:#5b21b6;margin-bottom:18px;
+}
+.role-notice.green{background:var(--a-green-soft);border-color:#a7f3d0;color:#065f46}
+
+/* ---- toast ---- */
+.toast-wrap{position:fixed;top:22px;right:22px;z-index:300;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{
+  display:flex;gap:13px;align-items:flex-start;padding:15px 18px;border-radius:14px;
+  background:#0f172a;color:#fff;box-shadow:0 20px 50px -14px rgba(0,0,0,.7);
+  max-width:400px;pointer-events:auto;animation:toastIn .4s cubic-bezier(.2,.9,.3,1);
+  border-left:4px solid var(--sky);
+}
+.toast.error{border-left-color:#f87171}
+.toast.success{border-left-color:#34d399}
+.toast .t-ico{flex:none;margin-top:1px}
+.toast b{display:block;font-size:.88rem;font-weight:700;margin-bottom:2px}
+.toast p{margin:0;font-size:.8rem;color:#cbd5e1;line-height:1.45}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+
+/* ---- modal ---- */
+.modal-bg{
+  position:fixed;inset:0;z-index:400;background:rgba(5,8,15,.7);
+  backdrop-filter:blur(6px);display:grid;place-items:center;padding:22px;
+  animation:fadeIn .25s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+  width:100%;max-width:420px;background:var(--a-surface);border-radius:18px;
+  padding:26px;box-shadow:0 40px 90px -20px rgba(0,0,0,.6);
+  animation:modalIn .3s cubic-bezier(.2,.9,.3,1);color:var(--a-text);
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(14px)}to{opacity:1;transform:none}}
+.modal h3{margin:0 0 8px;font-size:1.1rem;font-weight:800}
+.modal p{margin:0 0 22px;font-size:.88rem;color:var(--a-muted)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+
+/* ============================================================
+   10. EXPLAINER SECTIONS
+   ============================================================ */
+.answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.answer-card{
+  padding:30px 28px;border-radius:var(--radius);
+  background:var(--panel);border:1px solid var(--brd);
+  backdrop-filter:blur(12px);position:relative;overflow:hidden;
+}
+.answer-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad-main)}
+.answer-card:nth-child(2)::before{background:var(--grad-violet)}
+.ac-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.ac-num{
+  width:44px;height:44px;flex:none;border-radius:13px;display:grid;place-items:center;
+  font-weight:900;font-size:1.05rem;background:rgba(56,189,248,.14);
+  border:1px solid rgba(56,189,248,.32);color:var(--sky);
+}
+.answer-card:nth-child(2) .ac-num{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.32);color:var(--violet)}
+.ac-top h3{margin:0;font-size:1.1rem;font-weight:800;letter-spacing:-.015em;line-height:1.3}
+.answer-card > p{color:var(--muted);font-size:.93rem;margin:0 0 14px}
+
+/* flow diagram */
+.flow{display:flex;flex-direction:column;gap:0;margin:18px 0}
+.flow-step{
+  display:flex;gap:14px;align-items:flex-start;padding:14px 0;
+  border-bottom:1px dashed rgba(255,255,255,.09);
+}
+.flow-step:last-child{border-bottom:0}
+.fs-num{
+  width:28px;height:28px;flex:none;border-radius:9px;display:grid;place-items:center;
+  font-size:.72rem;font-weight:800;background:rgba(56,189,248,.14);
+  border:1px solid rgba(56,189,248,.3);color:var(--sky);
+}
+.fs-body b{display:block;font-size:.88rem;font-weight:700;margin-bottom:2px}
+.fs-body span{font-size:.82rem;color:var(--muted);line-height:1.5}
+.fs-body code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;
+  background:rgba(56,189,248,.1);color:#7dd3fc;padding:2px 6px;border-radius:5px;
+  border:1px solid rgba(56,189,248,.2);
+}
+
+/* code block */
+.code-block{
+  margin:16px 0 0;padding:16px 18px;border-radius:12px;
+  background:#070c16;border:1px solid rgba(255,255,255,.09);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.76rem;line-height:1.7;color:#c9d6ea;overflow-x:auto;
+}
+.code-block .cm{color:#4b5f7d}
+.code-block .kw{color:#c084fc}
+.code-block .st{color:#7dd3fc}
+.code-block .fn{color:#5eead4}
+.code-block .nm{color:#fbbf24}
+
+/* permission matrix */
+.matrix{width:100%;border-collapse:collapse;font-size:.83rem;margin-top:16px}
+.matrix th{
+  text-align:left;padding:10px 12px;font-size:.68rem;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+  border-bottom:1px solid var(--brd);white-space:nowrap;
+}
+.matrix th:not(:first-child){text-align:center}
+.matrix td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.06);color:var(--muted)}
+.matrix td:not(:first-child){text-align:center}
+.matrix tr:last-child td{border-bottom:0}
+.matrix tbody tr:hover td{background:rgba(255,255,255,.025)}
+.matrix .yes{color:var(--emerald);font-weight:800;font-size:1rem}
+.matrix .no{color:#475569;font-weight:800;font-size:1rem}
+.matrix .role-h{font-weight:800;font-size:.72rem;letter-spacing:.05em}
+.matrix .role-h.owner{color:var(--violet)}
+.matrix .role-h.staff{color:var(--emerald)}
+.matrix td:first-child{color:var(--text);font-weight:600}
+
+/* demo link button */
+.demo-link{
+  display:inline-flex;align-items:center;gap:9px;margin-top:18px;
+  padding:12px 22px;border-radius:999px;font-size:.86rem;font-weight:700;
+  background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);
+  color:#7dd3fc;transition:.25s;
+}
+.demo-link:hover{background:rgba(56,189,248,.2);transform:translateY(-2px)}
+
+/* ============================================================
+   11. REQUIREMENTS MAP
+   ============================================================ */
+.req-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.req-card{
+  padding:22px 20px;border-radius:var(--radius-sm);
+  background:var(--panel-2);border:1px solid var(--brd);
+  transition:.3s;
+}
+.req-card:hover{transform:translateY(-4px);border-color:var(--brd-strong);background:rgba(255,255,255,.055)}
+.req-card h4{margin:0 0 4px;font-size:.98rem;font-weight:700;display:flex;align-items:center;gap:9px}
+.req-card h4 .rc-ico{color:var(--sky);flex:none}
+.req-card .req-where{
+  font-size:.72rem;font-weight:700;color:var(--emerald);letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:12px;display:block;
+}
+.req-card ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.req-card li{position:relative;padding-left:22px;font-size:.85rem;color:var(--muted);line-height:1.5}
+.req-card li::before{
+  content:"";position:absolute;left:0;top:6px;width:12px;height:12px;border-radius:4px;
+  background:rgba(52,211,153,.16);border:1px solid rgba(52,211,153,.45);
+}
+.req-card li::after{content:"";position:absolute;left:4px;top:9px;width:4px;height:4px;border-radius:2px;background:var(--emerald)}
+
+/* ============================================================
+   12. STACK / TIMELINE
+   ============================================================ */
+.stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.stack-item{
+  padding:22px 20px;border-radius:var(--radius-sm);
+  background:var(--panel-2);border:1px solid var(--brd);transition:.3s;
+}
+.stack-item:hover{transform:translateY(-5px);border-color:var(--brd-strong);background:rgba(255,255,255,.055)}
+.si-ic{
+  width:42px;height:42px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px;
+  background:rgba(56,189,248,.13);color:var(--sky);border:1px solid rgba(56,189,248,.24);
+}
+.stack-item:nth-child(2) .si-ic{background:rgba(167,139,250,.13);color:var(--violet);border-color:rgba(167,139,250,.24)}
+.stack-item:nth-child(3) .si-ic{background:rgba(52,211,153,.13);color:var(--emerald);border-color:rgba(52,211,153,.24)}
+.stack-item:nth-child(4) .si-ic{background:rgba(251,191,36,.13);color:var(--amber);border-color:rgba(251,191,36,.24)}
+.stack-item:nth-child(5) .si-ic{background:rgba(251,113,133,.13);color:var(--rose);border-color:rgba(251,113,133,.24)}
+.stack-item:nth-child(6) .si-ic{background:rgba(34,211,238,.13);color:var(--cyan);border-color:rgba(34,211,238,.24)}
+.stack-item h4{margin:0 0 5px;font-size:.98rem;font-weight:700}
+.stack-item p{margin:0;font-size:.85rem;color:var(--muted);line-height:1.5}
+
+.timeline{position:relative;padding-left:40px}
+.timeline::before{
+  content:"";position:absolute;left:12px;top:8px;bottom:8px;width:2px;
+  background:linear-gradient(180deg,var(--sky),var(--cyan),var(--emerald),var(--violet),transparent);
+  opacity:.5;border-radius:2px;
+}
+.tl-item{position:relative;padding:0 0 30px}
+.tl-item:last-child{padding-bottom:0}
+.tl-dot{
+  position:absolute;left:-40px;top:2px;width:26px;height:26px;border-radius:50%;
+  background:#08111f;border:2px solid var(--sky);display:grid;place-items:center;
+  font-size:.63rem;font-weight:900;color:var(--sky);box-shadow:0 0 0 5px rgba(56,189,248,.09);
+}
+.tl-item:nth-child(2) .tl-dot{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 5px rgba(34,211,238,.09)}
+.tl-item:nth-child(3) .tl-dot{border-color:var(--emerald);color:var(--emerald);box-shadow:0 0 0 5px rgba(52,211,153,.09)}
+.tl-item:nth-child(4) .tl-dot{border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 5px rgba(251,191,36,.09)}
+.tl-item:nth-child(5) .tl-dot{border-color:var(--violet);color:var(--violet);box-shadow:0 0 0 5px rgba(167,139,250,.09)}
+.tl-phase{font-size:.7rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.tl-item h3{margin:0 0 5px;font-size:1rem;font-weight:700}
+.tl-item p{margin:0;color:var(--muted);font-size:.9rem}
+
+/* ============================================================
+   13. CTA / FOOTER
+   ============================================================ */
+.cta{
+  position:relative;overflow:hidden;border-radius:26px;padding:58px 42px;text-align:center;
+  background:linear-gradient(150deg,rgba(56,189,248,.15),rgba(52,211,153,.12),rgba(167,139,250,.1));
+  border:1px solid rgba(56,189,248,.28);
+}
+.cta::before{
+  content:"";position:absolute;width:560px;height:560px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(56,189,248,.28),transparent 70%);
+  top:-290px;left:50%;transform:translateX(-50%);filter:blur(32px);pointer-events:none;
+}
+.cta h2{position:relative;margin-bottom:14px}
+.cta p{position:relative;color:var(--muted);max-width:600px;margin:0 auto 30px}
+.cta-btns{position:relative;display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.platform-note{
+  position:relative;margin-top:26px;padding:16px 20px;border-radius:14px;
+  background:rgba(255,255,255,.045);border:1px dashed rgba(255,255,255,.14);
+  font-size:.82rem;color:var(--dim);max-width:520px;margin-left:auto;margin-right:auto;
+  display:flex;align-items:flex-start;gap:11px;text-align:left;
+}
+.platform-note svg{flex:none;color:var(--sky);margin-top:1px}
+.platform-note b{color:var(--muted);font-weight:600}
+
+footer{
+  padding:44px 0 56px;text-align:center;color:var(--dim);font-size:.84rem;
+  border-top:1px solid rgba(255,255,255,.06);margin-top:56px;
+}
+.f-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;color:var(--muted);font-weight:600}
+
+/* ============================================================
+   14. REVEAL
+   ============================================================ */
+[data-reveal]{opacity:0;transform:translateY(26px);transition:opacity .75s cubic-bezier(.2,.8,.2,1),transform .75s cubic-bezier(.2,.8,.2,1)}
+[data-reveal].in{opacity:1;transform:none}
+[data-reveal][data-d="1"]{transition-delay:.09s}
+[data-reveal][data-d="2"]{transition-delay:.18s}
+[data-reveal][data-d="3"]{transition-delay:.27s}
+[data-reveal][data-d="4"]{transition-delay:.36s}
+[data-reveal][data-d="5"]{transition-delay:.45s}
+
+/* ============================================================
+   15. RESPONSIVE
+   ============================================================ */
+@media (max-width:1080px){
+  .answer-grid{grid-template-columns:1fr}
+  .dash-cols{grid-template-columns:1fr}
+  .top-nav{display:none}
+}
+@media (max-width:900px){
+  .app-shell{grid-template-columns:1fr;min-height:auto;max-height:none}
+  .app-side{
+    border-right:0;border-bottom:1px solid var(--a-brd);
+    flex-direction:row;align-items:center;overflow-x:auto;padding:0;
+  }
+  .as-user{display:none}
+  .as-nav{flex-direction:row;padding:8px;gap:6px;flex:none;overflow-x:auto;width:100%}
+  .as-nav-label{display:none}
+  .as-item{width:auto;white-space:nowrap;padding:9px 14px;font-size:.82rem}
+  .as-foot{display:none}
+  .app-main{overflow:visible}
+  .am-view{overflow:visible;padding:20px 18px 34px}
+  .cal-wrap{min-width:700px}
+  .form-grid{grid-template-columns:1fr}
+  .am-search{min-width:0;flex:1}
+  .am-tools{flex:1}
+  .resched-date-strip{gap:6px}
+  .resched-date{width:58px}
+  .resched-slots{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
+}
+@media (max-width:640px){
+  .hero{padding:46px 0 34px}
+  .sec{padding:46px 0}
+  .role-switch{padding:4px}
+  .role-btn{padding:8px 14px;font-size:.78rem}
+  .cta{padding:40px 22px}
+  .brand small{display:none}
+  .top-cta{padding:9px 15px;font-size:.8rem}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .bk-card{flex-direction:column}
+  .bk-when{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:8px}
+  .bk-when b{font-size:1.1rem}
+  .bk-when span,.bk-when em{margin:0}
+  .toast-wrap{left:14px;right:14px;top:14px}
+  .toast{max-width:none}
+  .resched-head{padding:18px 20px 14px}
+  .resched-body{padding:18px 20px 22px}
+}
+
+/* ============================================================
+   16. REDUCED MOTION / PRINT
+   ============================================================ */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  html{scroll-behavior:auto}
+  [data-reveal]{opacity:1;transform:none}
+}
+@media print{
+  body{background:#fff;color:#111}
+  .bg-fx,.topbar,#progress,.orb,.grid-lines{display:none !important}
+  [data-reveal]{opacity:1 !important;transform:none !important}
+  .app-frame{background:#111}
+  .answer-card,.stack-item,.req-card{background:#fafafa;border-color:#ddd}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="bg-fx" aria-hidden="true">
+  <div class="grid-lines"></div>
+  <div class="orb a"></div>
+  <div class="orb b"></div>
+  <div class="orb c"></div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div id="modalRoot"></div>
+
+<div class="shell">
+
+  <!-- ================= TOPBAR ================= -->
+  <div class="topbar">
+    <div class="wrap topbar-in">
+      <div class="brand">
+        <span class="brand-mark">H</span>
+        <span>Home Services<small>Live Prototype &amp; Proposal</small></span>
+      </div>
+      <nav class="top-nav">
+        <a href="#demo">Live demo</a>
+        <a href="#answers">Answers</a>
+        <a href="#requirements">Requirements</a>
+        <a href="#stack">Stack</a>
+      </nav>
+      <a href="#hire" class="top-cta">
+        Start the build
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="wrap">
+      <span class="keyword" data-reveal><span class="kw-dot"></span> Home Services</span>
+      <h1 data-reveal data-d="1">
+        Not a mockup — a <span class="grad">working prototype</span> of your booking platform.
+      </h1>
+      <p class="lede" data-reveal data-d="2">
+        Below is a functional walkthrough of the first version: customers browse services and book
+        real time slots, the team confirms and completes jobs, and the owner controls services,
+        staff and hours. <strong>Switch roles</strong>, <strong>book a slot</strong>, and
+        <strong>trigger a race condition</strong> to see exactly how double-bookings are prevented.
+      </p>
+      <div class="hero-btns" data-reveal data-d="3">
+        <a href="#demo" class="btn btn-primary">
+          Open the live demo
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#answers" class="btn btn-ghost">
+          See the two answers
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        </a>
+      </div>
+      <p class="hero-note" data-reveal data-d="4">
+        Built with <b>Angular + ASP.NET Core + SQL Server</b> · Click through everything, nothing is a screenshot
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= LIVE DEMO ================= -->
+  <section class="sec" id="demo">
+    <div class="wrap">
+      <div class="sec-head center" data-reveal>
+        <span class="sec-tag">Live workflow</span>
+        <h2>This is how the app actually works</h2>
+        <p>Switch between the three roles below. Every screen, button and permission is functional.</p>
+      </div>
+
+      <div class="role-bar" data-reveal data-d="1">
+        <span class="role-label">Sign in as</span>
+        <div class="role-switch" id="roleSwitch">
+          <button class="role-btn on" data-role="customer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+            Customer
+          </button>
+          <button class="role-btn" data-role="staff">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/></svg>
+            Staff
+          </button>
+          <button class="role-btn" data-role="owner">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg>
+            Owner
+          </button>
+        </div>
+      </div>
+      <p class="role-hint" data-reveal data-d="2">
+        Notice how the sidebar, available actions and visible data change with each role — that's <b>backend-enforced permission policy</b>, not just hidden buttons.
+      </p>
+
+      <div class="app-frame" data-reveal data-d="2">
+        <div class="app-shell">
+
+          <!-- SIDEBAR -->
+          <aside class="app-side">
+            <div class="as-user">
+              <span class="as-av" id="userAv">AC</span>
+              <div class="as-user-info">
+                <b id="userName">Alex Carter</b>
+                <span id="userEmail">alex@example.com</span>
+              </div>
+              <span class="as-role customer" id="userRole">Customer</span>
+            </div>
+
+            <nav class="as-nav" id="appNav"></nav>
+
+            <div class="as-foot">
+              <button class="as-reset" id="resetDemo">↺ Reset demo data</button>
+            </div>
+          </aside>
+
+          <!-- MAIN -->
+          <main class="app-main">
+            <div class="am-top">
+              <div class="am-title" id="appTitle">
+                Book a service
+                <span id="appSubtitle">Choose what you need and pick a time</span>
+              </div>
+              <div class="am-tools">
+                <div class="am-search" id="searchBox" style="display:none">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                  <input type="text" id="searchInput" placeholder="Search…">
+                </div>
+                <button class="am-icon-btn" id="notifBtn" title="Notifications">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="am-view" id="appView"></div>
+          </main>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ANSWERS ================= -->
+  <section class="sec" id="answers">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <span class="sec-tag">Your two questions</span>
+        <h2>How it's actually implemented</h2>
+        <p>Both answers are demonstrated live in the prototype above — here's the engineering behind them.</p>
+      </div>
+
+      <div class="answer-grid">
+
+        <!-- Q1 -->
+        <article class="answer-card" data-reveal data-d="1">
+          <div class="ac-top">
+            <span class="ac-num">01</span>
+            <h3>Preventing two customers booking the same time slot</h3>
+          </div>
+          <p>
+            The frontend never decides availability. It only renders what the API returns.
+            The guarantee lives at the <strong>database layer</strong>, so no race condition can slip through.
+          </p>
+
+          <div class="flow">
+            <div class="flow-step">
+              <span class="fs-num">1</span>
+              <div class="fs-body">
+                <b>Customer picks a slot</b>
+                <span>The API places a short <strong>soft hold</strong> on that slot for 5 minutes — visible in the demo as the countdown banner.</span>
+              </div>
+            </div>
+            <div class="flow-step">
+              <span class="fs-num">2</span>
+              <div class="fs-body">
+                <b>Booking submitted inside a transaction</b>
+                <span>Availability is re-checked and the row inserted in one <code>SERIALIZABLE</code> transaction. Two simultaneous requests can't both commit.</span>
+              </div>
+            </div>
+            <div class="flow-step">
+              <span class="fs-num">3</span>
+              <div class="fs-body">
+                <b>Unique index is the final guard</b>
+                <span>A unique constraint on <code>(StaffId, StartTime)</code> means the database physically rejects a duplicate — the last line of defence.</span>
+              </div>
+            </div>
+            <div class="flow-step">
+              <span class="fs-num">4</span>
+              <div class="fs-body">
+                <b>Loser gets a clean 409</b>
+                <span>The API returns <code>409 Conflict</code>. The UI refreshes the slot list and shows a friendly message — never a crash.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="code-block">
+<span class="cm">// Unique index — the database's final word</span>
+CREATE UNIQUE INDEX <span class="fn">UX_Booking_Staff_Start</span>
+  ON <span class="nm">Bookings</span> (<span class="nm">StaffId</span>, <span class="nm">StartTime</span>)
+  WHERE <span class="nm">Status</span> &lt;&gt; <span class="st">'Cancelled'</span>;
+          </div>
+
+          <button class="demo-link" data-goto="race">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+            Trigger the race condition in the live demo
+          </button>
+        </article>
+
+        <!-- Q2 -->
+        <article class="answer-card" data-reveal data-d="2">
+          <div class="ac-top">
+            <span class="ac-num">02</span>
+            <h3>Different permissions for the owner and staff</h3>
+          </div>
+          <p>
+            Permissions are enforced <strong>server-side first</strong> using ASP.NET Core Identity with
+            roles and policies. The Angular UI only reflects what the backend already allows — so
+            calling the API directly changes nothing.
+          </p>
+
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th><span class="role-h owner">Owner</span></th>
+                <th><span class="role-h staff">Staff</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>View all bookings</td><td class="yes">✓</td><td class="no">—</td></tr>
+              <tr><td>View only assigned bookings</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>Confirm / reschedule / cancel</td><td class="yes">✓</td><td class="no">—</td></tr>
+              <tr><td>Mark job complete</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>Manage services &amp; pricing</td><td class="yes">✓</td><td class="no">—</td></tr>
+              <tr><td>Set working hours</td><td class="yes">✓</td><td class="no">—</td></tr>
+              <tr><td>Manage staff accounts</td><td class="yes">✓</td><td class="no">—</td></tr>
+              <tr><td>View revenue statistics</td><td class="yes">✓</td><td class="no">—</td></tr>
+            </tbody>
+          </table>
+
+          <div class="code-block">
+<span class="cm">// Policy registered once, applied everywhere</span>
+options.<span class="fn">AddPolicy</span>(<span class="st">"CanManageServices"</span>, p =&gt;
+  p.<span class="fn">RequireRole</span>(<span class="st">"Owner"</span>));
+
+<span class="cm">// Every endpoint is protected</span>
+[<span class="fn">Authorize</span>(Policy = <span class="st">"CanManageServices"</span>)]
+[<span class="fn">HttpPut</span>(<span class="st">"api/services/{id}"</span>)]
+<span class="kw">public</span> <span class="kw">async</span> Task&lt;IActionResult&gt; <span class="fn">Update</span>(...)
+          </div>
+
+          <button class="demo-link" data-goto="permissions">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg>
+            Switch to Staff in the demo and try to open Services
+          </button>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REQUIREMENTS MAP ================= -->
+  <section class="sec" id="requirements">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <span class="sec-tag em">Requirements map</span>
+        <h2>Every item from your brief, and where it lives</h2>
+        <p>Click through the matching screen in the demo above to see each one working.</p>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-card" data-reveal data-d="1">
+          <h4><span class="rc-ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </span> Customer side</h4>
+          <span class="req-where">Demo → Customer role</span>
+          <ul>
+            <li>Create an account and log in</li>
+            <li>View services and pricing</li>
+            <li>Select a service, date and time slot</li>
+            <li>Submit a booking request</li>
+            <li>View upcoming and previous bookings</li>
+            <li>Reschedule or cancel a booking</li>
+            <li>Receive booking updates by email</li>
+            <li>Upload a photo where relevant</li>
+            <li>Pay online at booking (Stripe)</li>
+          </ul>
+        </div>
+
+        <div class="req-card" data-reveal data-d="2">
+          <h4><span class="rc-ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          </span> Admin &amp; team dashboard</h4>
+          <span class="req-where">Demo → Owner / Staff role</span>
+          <ul>
+            <li>Upcoming bookings and recent activity</li>
+            <li>Calendar and list views</li>
+            <li>Confirm, reschedule, cancel, complete</li>
+            <li>Manage customers and booking history</li>
+            <li>Add and edit services and pricing</li>
+            <li>Set working hours and time slots</li>
+            <li>Assign bookings to team members</li>
+            <li>Search and filter customers and bookings</li>
+            <li>Booking and revenue statistics</li>
+            <li>Owner vs staff access levels</li>
+          </ul>
+        </div>
+
+        <div class="req-card" data-reveal data-d="3">
+          <h4><span class="rc-ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </span> Booking &amp; notifications</h4>
+          <span class="req-where">Demo → Customer booking flow</span>
+          <ul>
+            <li>Only available slots are selectable</li>
+            <li>Overlapping appointments prevented at DB level</li>
+            <li>Soft hold while the customer decides</li>
+            <li>Team reviews and confirms requests</li>
+            <li>Email on request, confirmation, cancellation</li>
+            <li>Appointment reminders</li>
+            <li>Optional Stripe payment at booking</li>
+          </ul>
+        </div>
+
+        <div class="req-card" data-reveal data-d="4">
+          <h4><span class="rc-ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+          </span> General requirements</h4>
+          <span class="req-where">Throughout the app</span>
+          <ul>
+            <li>Works on desktop and mobile</li>
+            <li>Form validation with inline errors</li>
+            <li>Error handling and empty states</li>
+            <li>Permissions enforced server-side</li>
+            <li>File uploads with validation</li>
+            <li>Search and filtering where needed</li>
+            <li>Clean, professional interface</li>
+            <li>Organised code for future features</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STACK ================= -->
+  <section class="sec" id="stack">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <span class="sec-tag vi">Recommended stack</span>
+        <h2>Angular + .NET — and why</h2>
+        <p>You asked for a recommendation. Here it is, with the reasoning behind each layer.</p>
+      </div>
+
+      <div class="stack">
+        <div class="stack-item" data-reveal data-d="1">
+          <div class="si-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><path d="M12 22V12M3 7l9 5 9-5"/></svg>
+          </div>
+          <h4>Angular</h4>
+          <p>Strong typing, built-in routing and reactive forms, and a component structure that stays clean as the app grows.</p>
+        </div>
+        <div class="stack-item" data-reveal data-d="2">
+          <div class="si-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><path d="M6 6.5h.01M6 17.5h.01"/></svg>
+          </div>
+          <h4>ASP.NET Core Web API</h4>
+          <p>Clean controllers, dependency injection, policy-based authorisation and Swagger docs. Solid for booking logic.</p>
+        </div>
+        <div class="stack-item" data-reveal data-d="3">
+          <div class="si-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+          </div>
+          <h4>SQL Server + EF Core</h4>
+          <p>Relational integrity for bookings, customers and staff. Transactions and unique constraints handle scheduling safety.</p>
+        </div>
+        <div class="stack-item" data-reveal data-d="4">
+          <div class="si-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          </div>
+          <h4>Stripe</h4>
+          <p>Optional pay-at-booking via Stripe Checkout, webhooks for payment status, and refund handling on cancellation.</p>
+        </div>
+        <div class="stack-item" data-reveal data-d="5">
+          <div class="si-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 6 10-6"/></svg>
+          </div>
+          <h4>Email notifications</h4>
+          <p>Transactional emails for new requests, confirmations, cancellations and reminders, via a reliable provider with templates.</p>
+        </div>
+        <div class="stack-item" data-reveal data-d="6">
+          <div class="si-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <h4>Identity &amp; uploads</h4>
+          <p>ASP.NET Core Identity with JWT, hashed passwords and role policies. Secure image uploads with validation and blob storage.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TIMELINE ================= -->
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <span class="sec-tag am">Timeline</span>
+        <h2>Phased delivery, working software early</h2>
+        <p>Each phase ends with something you can click, review and give feedback on.</p>
+      </div>
+
+      <div class="timeline">
+        <div class="tl-item" data-reveal>
+          <span class="tl-dot">1</span>
+          <div class="tl-phase">Week 1</div>
+          <h3>Discovery, data model &amp; foundations</h3>
+          <p>Confirm services, working hours and roles. Set up the Angular + .NET solution, database schema, authentication and project structure.</p>
+        </div>
+        <div class="tl-item" data-reveal data-d="1">
+          <span class="tl-dot">2</span>
+          <div class="tl-phase">Week 2</div>
+          <h3>Customer portal &amp; booking flow</h3>
+          <p>Accounts, service browsing, live availability, booking submission, and the slot-locking logic that prevents double bookings.</p>
+        </div>
+        <div class="tl-item" data-reveal data-d="2">
+          <span class="tl-dot">3</span>
+          <div class="tl-phase">Week 3</div>
+          <h3>Admin dashboard &amp; management</h3>
+          <p>Calendar and list views, confirm/reschedule/cancel/complete, customer management, services and pricing, working hours, staff assignment, search and filters.</p>
+        </div>
+        <div class="tl-item" data-reveal data-d="3">
+          <span class="tl-dot">4</span>
+          <div class="tl-phase">Week 4</div>
+          <h3>Notifications, payments &amp; uploads</h3>
+          <p>Email notifications for all key events, Stripe pay-at-booking, photo uploads, and the owner/staff permission layers applied across the app.</p>
+        </div>
+        <div class="tl-item" data-reveal data-d="4">
+          <span class="tl-dot">5</span>
+          <div class="tl-phase">Week 5</div>
+          <h3>Polish, testing &amp; handover</h3>
+          <p>Responsive checks, validation and error handling, statistics, bug fixes, and a handover with documentation and a walkthrough.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CTA ================= -->
+  <section class="sec" id="hire">
+    <div class="wrap">
+      <div class="cta" data-reveal>
+        <h2>Let's build the first version</h2>
+        <p>
+          If this direction looks right, I'd love to hear more about your services and how your team
+          works today. Send me a message on Upwork and I'll come back with a clear plan, a fixed price
+          and a start date.
+        </p>
+        <div class="cta-btns">
+          <a class="btn btn-primary" href="#demo">
+            Re-open the live demo
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="#requirements">
+            Review the requirements map
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+          </a>
+        </div>
+        <div class="platform-note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg>
+          <span><b>Note:</b> All communication stays within the Upwork platform to comply with their Terms of Service. Portfolio links shared here are for work review only.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="f-brand">
+        <span class="brand-mark" style="width:26px;height:26px;font-size:.8rem;border-radius:8px">H</span>
+        Home Services — Live Prototype &amp; Proposal
+      </div>
+      <p>Angular + ASP.NET Core + SQL Server · Customer portal · Admin dashboard · Scheduling · Payments · Notifications</p>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const TODAY = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
+
+function dayAt(i){ const d = new Date(TODAY); d.setDate(d.getDate()+i); return d; }
+function iso(d){ const x = new Date(d); return x.toISOString().slice(0,10); }
+function fmtDayShort(d){ return d.toLocaleDateString('en-AU',{weekday:'short'}); }
+function fmtMonthShort(d){ return d.toLocaleDateString('en-AU',{month:'short'}); }
+function fmtLong(d){ return d.toLocaleDateString('en-AU',{weekday:'long', day:'numeric', month:'long'}); }
+function fmtNum(d){ return d.getDate(); }
+
+const TIMES = ['08:00','09:30','11:00','12:30','14:00','15:30','17:00'];
+function fmtTime(t){
+  const [h,m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return hh + ':' + String(m).padStart(2,'0') + ' ' + ap;
+}
+
+const SERVICES = [
+  { id:'deep',    name:'Deep Clean',              desc:'Full top-to-bottom clean for homes needing extra attention.', price:220, dur:'3 hrs',  icon:'✨' },
+  { id:'regular', name:'Regular Home Clean',      desc:'Weekly or fortnightly upkeep — kitchen, bathrooms, floors.',   price:140, dur:'2 hrs',  icon:'🧽' },
+  { id:'lease',   name:'End of Lease Clean',      desc:'Bond-back clean following the standard real-estate checklist.', price:380, dur:'5 hrs',  icon:'🔑' },
+  { id:'window',  name:'Window Cleaning',         desc:'Interior and exterior windows, tracks and flyscreens.',        price:110, dur:'1.5 hrs',icon:'🪟' },
+  { id:'garden',  name:'Garden Maintenance',      desc:'Mowing, edging, weeding and green waste removal.',             price:160, dur:'2 hrs',  icon:'🌿' },
+  { id:'oven',    name:'Oven & Appliance Clean',  desc:'Deep clean of oven, stovetop, rangehood and microwave.',        price:95,  dur:'1 hr',   icon:'🔥' }
+];
+
+const STAFF = [
+  { id:1, name:'Maria Santos', role:'Senior Cleaner', initials:'MS', color:'c1' },
+  { id:2, name:'Tom Nguyen',   role:'Cleaner',        initials:'TN', color:'c2' },
+  { id:3, name:'Aisha Khan',   role:'Cleaner',        initials:'AK', color:'c3' },
+  { id:4, name:'Dave Wilson',  role:'Gardener',       initials:'DW', color:'c4' }
+];
+
+function svcName(id){ const s = SERVICES.find(x => x.id === id); return s ? s.name : id; }
+function svcPrice(id){ const s = SERVICES.find(x => x.id === id); return s ? s.price : 0; }
+function staffName(id){ const s = STAFF.find(x => x.id === id); return s ? s.name : '—'; }
+
+const SEED_BOOKINGS = [
+  { id:1001, customer:'Sarah Mitchell', email:'sarah@example.com', phone:'0412 345 678', service:'deep',    date: iso(dayAt(0)),  time:'09:30', staff:1, status:'pending',   address:'12 Bondi Rd, Bondi',        paid:false, mine:false, notes:'' },
+  { id:1002, customer:'James Tan',      email:'james@example.com', phone:'0423 456 789', service:'window',  date: iso(dayAt(0)),  time:'14:00', staff:2, status:'confirmed', address:'8 Randwick St, Randwick',   paid:true,  mine:false, notes:'' },
+  { id:1003, customer:'Amy Lawson',     email:'amy@example.com',   phone:'0434 567 890', service:'lease',   date: iso(dayAt(1)),  time:'11:00', staff:1, status:'pending',   address:'5 Coogee Bay Rd, Coogee',   paid:false, mine:false, notes:'' },
+  { id:1004, customer:'Ryan Kelly',     email:'ryan@example.com',  phone:'0445 678 901', service:'garden',  date: iso(dayAt(1)),  time:'15:30', staff:4, status:'confirmed', address:'22 Maroubra Rd, Maroubra',  paid:true,  mine:false, notes:'' },
+  { id:1005, customer:'Nina Patel',     email:'nina@example.com',  phone:'0456 789 012', service:'regular', date: iso(dayAt(2)),  time:'08:00', staff:3, status:'confirmed', address:'14 Surry Hills, Sydney',    paid:true,  mine:false, notes:'' },
+  { id:1006, customer:'Tom Baker',      email:'tom@example.com',   phone:'0467 890 123', service:'oven',    date: iso(dayAt(2)),  time:'12:30', staff:2, status:'pending',   address:'3 Newtown Ave, Newtown',    paid:false, mine:false, notes:'' },
+  { id:1007, customer:'Alex Carter',    email:'alex@example.com',  phone:'0400 111 222', service:'regular', date: iso(dayAt(1)),  time:'09:30', staff:1, status:'confirmed', address:'7 Paddington St, Paddington', paid:true,  mine:true,  notes:'Please focus on the kitchen.' },
+  { id:1008, customer:'Alex Carter',    email:'alex@example.com',  phone:'0400 111 222', service:'window',  date: iso(dayAt(-6)), time:'14:00', staff:2, status:'completed', address:'7 Paddington St, Paddington', paid:true,  mine:true,  notes:'' },
+  { id:1009, customer:'Alex Carter',    email:'alex@example.com',  phone:'0400 111 222', service:'deep',    date: iso(dayAt(-14)),time:'11:00', staff:1, status:'completed', address:'7 Paddington St, Paddington', paid:true,  mine:true,  notes:'' },
+  { id:1010, customer:'Lucy Grant',     email:'lucy@example.com',  phone:'0478 901 234', service:'regular', date: iso(dayAt(0)),  time:'17:00', staff:3, status:'confirmed', address:'19 Manly Rd, Manly',        paid:true,  mine:false, notes:'' }
+];
+
+/* ============================================================
+   PERMISSIONS
+   ============================================================ */
+const PERMS = {
+  owner: ['manageServices','manageStaff','manageSettings','confirmBookings','cancelBookings',
+          'rescheduleBookings','completeBookings','viewRevenue','viewAllBookings','viewAllCustomers'],
+  staff: ['completeBookings','viewAssignedBookings','viewCustomers']
+};
+function can(perm){ return (PERMS[state.role] || []).includes(perm); }
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let state = {
+  role: 'customer',
+  screen: 'services',
+  bookStep: 1,
+  selectedService: null,
+  selectedDate: iso(dayAt(0)),
+  selectedTime: null,
+  heldUntil: null,
+  holdTimer: null,
+  bookFilter: 'all',
+  myTab: 'upcoming',
+  search: '',
+  editingBookingId: null,
+  services: SERVICES.map(s => ({...s})),
+  staff: STAFF.map(s => ({...s})),
+  bookings: SEED_BOOKINGS.map(b => ({...b})),
+  settings: {
+    hours: [
+      { day:'Monday',    open:true,  from:'08:00', to:'18:00' },
+      { day:'Tuesday',   open:true,  from:'08:00', to:'18:00' },
+      { day:'Wednesday', open:true,  from:'08:00', to:'18:00' },
+      { day:'Thursday',  open:true,  from:'08:00', to:'18:00' },
+      { day:'Friday',    open:true,  from:'08:00', to:'18:00' },
+      { day:'Saturday',  open:true,  from:'09:00', to:'15:00' },
+      { day:'Sunday',    open:false, from:'00:00', to:'00:00' }
+    ],
+    slotMins: 90
+  }
+};
+
+const USERS = {
+  customer: { name:'Alex Carter',   email:'alex@example.com',   initials:'AC', label:'Customer' },
+  staff:    { name:'Maria Santos',  email:'maria@company.com',  initials:'MS', label:'Staff' },
+  owner:    { name:'Daniel Okafor', email:'daniel@company.com', initials:'DO', label:'Owner' }
+};
+
+const NAV = {
+  customer: [
+    { id:'services',   label:'Book a service', icon:'grid' },
+    { id:'mybookings', label:'My bookings',    icon:'calendar' }
+  ],
+  staff: [
+    { id:'dashboard', label:'Dashboard', icon:'home' },
+    { id:'bookings',  label:'Bookings',  icon:'list' },
+    { id:'calendar',  label:'Calendar',  icon:'calendar' },
+    { id:'customers', label:'Customers', icon:'users' }
+  ],
+  owner: [
+    { id:'dashboard', label:'Dashboard', icon:'home' },
+    { id:'bookings',  label:'Bookings',  icon:'list' },
+    { id:'calendar',  label:'Calendar',  icon:'calendar' },
+    { id:'customers', label:'Customers', icon:'users' },
+    { id:'services',  label:'Services',  icon:'tag' },
+    { id:'staff',     label:'Staff',     icon:'team' },
+    { id:'settings',  label:'Settings',  icon:'cog' }
+  ]
+};
+
+const SCREEN_META = {
+  services:   ['Book a service',        'Choose what you need and pick a time'],
+  mybookings: ['My bookings',           'Upcoming and past appointments'],
+  dashboard:  ['Dashboard',             "Today at a glance"],
+  bookings:   ['Bookings',              'Review, confirm and manage every job'],
+  calendar:   ['Calendar',              'This week at a glance'],
+  customers:  ['Customers',             'Everyone who has booked with you'],
+  services:   ['Services & pricing',    'What you offer and what it costs'],
+  staff:      ['Team',                  'Who works with you'],
+  settings:   ['Settings',              'Working hours and availability'],
+  book:       ['Book a service',        'Pick a date and time that suits you'],
+  confirmed:  ['Booking confirmed',     'A confirmation email is on its way']
+};
+
+/* ============================================================
+   ICONS
+   ============================================================ */
+const ICONS = {
+  home:     '<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+  list:     '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  users:    '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.9"/>',
+  tag:      '<path d="M20.6 13.4L12 22l-9-9V4h9l8.6 8.6a1.4 1.4 0 0 1 0 2z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  team:     '<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 20a5 5 0 0 1 5.5-4.9"/>',
+  cog:      '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3V3a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 17 4.6l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 10h.1a2 2 0 1 1 0 4H21a1.6 1.6 0 0 0-1.6 1z"/>',
+  grid:     '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  check:    '<path d="M20 6L9 17l-5-5"/>',
+  x:        '<path d="M18 6L6 18M6 6l12 12"/>',
+  lock:     '<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  bolt:     '<path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>',
+  arrow:    '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  back:     '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+  upload:   '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/>',
+  card:     '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  clock:    '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  pin:      '<path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
+  phone:    '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/>',
+  mail:     '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 6 10-6"/>',
+  shield:   '<path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/>',
+  eye:      '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>'
+};
+function icon(n, s=18){
+  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[n]||'') + '</svg>';
+}
+
+/* ============================================================
+   SLOT LOGIC
+   ============================================================ */
+function takenTimes(date){
+  return state.bookings
+    .filter(b => b.date === date && b.status !== 'cancelled')
+    .map(b => b.time);
+}
+function isFree(date, time){
+  return takenTimes(date).indexOf(time) === -1;
+}
+function isHeldByMe(date, time){
+  return state.selectedDate === date && state.selectedTime === time && state.heldUntil && Date.now() < state.heldUntil;
+}
+
+/* ============================================================
+   RENDER — SIDEBAR
+   ============================================================ */
+function renderSidebar(){
+  const u = USERS[state.role];
+  document.getElementById('userAv').textContent = u.initials;
+  document.getElementById('userName').textContent = u.name;
+  document.getElementById('userEmail').textContent = u.email;
+  const roleEl = document.getElementById('userRole');
+  roleEl.textContent = u.label;
+  roleEl.className = 'as-role ' + state.role;
+
+  const items = NAV[state.role];
+  const nav = document.getElementById('appNav');
+  nav.innerHTML =
+    '<div class="as-nav-label">' + (state.role === 'customer' ? 'Your account' : 'Operations') + '</div>' +
+    items.map(it => {
+      const on = state.screen === it.id || (state.screen === 'book' && it.id === 'services') || (state.screen === 'confirmed' && it.id === 'mybookings');
+      return '<button class="as-item' + (on ? ' on' : '') + '" data-nav="' + it.id + '">' +
+        icon(it.icon, 17) + '<span>' + it.label + '</span></button>';
+    }).join('');
+}
+
+/* ============================================================
+   RENDER — TOP
+   ============================================================ */
+function renderAppTop(){
+  const meta = SCREEN_META[state.screen] || ['', ''];
+  document.getElementById('appTitle').innerHTML = meta[0] + '<span>' + meta[1] + '</span>';
+  const sb = document.getElementById('searchBox');
+  sb.style.display = (state.screen === 'bookings' || state.screen === 'customers') ? 'flex' : 'none';
+}
+
+/* ============================================================
+   RENDER — ROUTER
+   ============================================================ */
+function renderView(){
+  const v = document.getElementById('appView');
+  if (state.role === 'customer'){
+    if (state.screen === 'services')        v.innerHTML = viewCustomerServices();
+    else if (state.screen === 'book')       v.innerHTML = viewCustomerBook();
+    else if (state.screen === 'mybookings') v.innerHTML = viewMyBookings();
+    else if (state.screen === 'confirmed')  v.innerHTML = viewConfirmed();
+  } else {
+    if (state.screen === 'dashboard')       v.innerHTML = viewDashboard();
+    else if (state.screen === 'bookings')   v.innerHTML = viewBookings();
+    else if (state.screen === 'calendar')   v.innerHTML = viewCalendar();
+    else if (state.screen === 'customers')  v.innerHTML = viewCustomers();
+    else if (state.screen === 'services')   v.innerHTML = can('manageServices') ? viewServices() : viewDenied('manageServices');
+    else if (state.screen === 'staff')      v.innerHTML = can('manageStaff')    ? viewStaff()    : viewDenied('manageStaff');
+    else if (state.screen === 'settings')   v.innerHTML = can('manageSettings') ? viewSettings() : viewDenied('manageSettings');
+  }
+}
+
+function render(){
+  renderSidebar();
+  renderAppTop();
+  renderView();
+}
+
+/* ============================================================
+   VIEW — CUSTOMER: SERVICES
+   ============================================================ */
+function viewCustomerServices(){
+  return '' +
+  '<div class="a-page-head">' +
+    '<h3>What can we help with?</h3>' +
+    '<p>Pick a service and we\'ll show you the times we have available.</p>' +
+  '</div>' +
+  '<div class="svc-grid">' +
+    state.services.map(s =>
+      '<button class="svc-card" data-svc="' + s.id + '">' +
+        '<span class="svc-ico">' + s.icon + '</span>' +
+        '<span class="svc-body">' +
+          '<b>' + s.name + '</b>' +
+          '<p>' + s.desc + '</p>' +
+          '<span class="svc-meta">' + icon('clock',13) + s.dur + '</span>' +
+        '</span>' +
+        '<span class="svc-price">$' + s.price + '</span>' +
+      '</button>'
+    ).join('') +
+  '</div>';
+}
+
+/* ============================================================
+   VIEW — CUSTOMER: BOOKING FLOW
+   ============================================================ */
+function viewCustomerBook(){
+  const s = state.services.find(x => x.id === state.selectedService);
+  if (!s) return viewCustomerServices();
+
+  const step = state.bookStep;
+
+  let html = '<div class="a-page-head">' +
+    '<button class="a-btn a-btn-out a-btn-sm" data-action="back-to-services" style="margin-bottom:14px">' + icon('back',14) + ' All services</button>' +
+    '<h3>' + s.name + '</h3>' +
+    '<p>$' + s.price + ' · ' + s.dur + ' · ' + s.desc + '</p>' +
+  '</div>';
+
+  /* stepper */
+  html += '<div class="stepper">' +
+    stepDot(1, 'Date & time', step) + '<div class="step-line"></div>' +
+    stepDot(2, 'Your details', step) + '<div class="step-line"></div>' +
+    stepDot(3, 'Confirmed', step) +
+  '</div>';
+
+  /* ---- STEP 1 ---- */
+  if (step === 1){
+    html += '<div class="a-card a-card-pad">';
+
+    if (state.selectedTime && state.heldUntil && Date.now() < state.heldUntil){
+      const left = Math.max(0, Math.ceil((state.heldUntil - Date.now())/1000));
+      const mm = String(Math.floor(left/60)).padStart(2,'0');
+      const ss = String(left%60).padStart(2,'0');
+      html += '<div class="hold-banner">' + icon('lock',17) +
+        '<span>Slot held for you for <b id="holdClock">' + mm + ':' + ss + '</b> — complete your details before it expires.</span></div>';
+    }
+
+    html += '<div style="font-size:.8rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--a-dim);margin-bottom:12px">Choose a date</div>';
+    html += '<div class="date-strip">';
+    for (let i = 0; i < 7; i++){
+      const d = dayAt(i);
+      const dISO = iso(d);
+      const on = dISO === state.selectedDate;
+      html += '<button class="date-chip' + (on ? ' on' : '') + '" data-date="' + dISO + '">' +
+        '<span>' + fmtDayShort(d) + '</span>' +
+        '<b>' + fmtNum(d) + '</b>' +
+        '<span>' + fmtMonthShort(d) + '</span>' +
+      '</button>';
+    }
+    html += '</div>';
+
+    html += '<div style="font-size:.8rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--a-dim);margin-bottom:10px">Available times</div>';
+    html += '<div class="slot-note"><span class="dot-free"></span> Available &nbsp;·&nbsp; <span class="dot-taken"></span> Already booked</div>';
+
+    html += '<div class="slot-grid">';
+    TIMES.forEach(t => {
+      const free = isFree(state.selectedDate, t);
+      const on = state.selectedTime === t && free;
+      html += '<button class="slot-btn' + (on ? ' on' : '') + '"' + (!free ? ' disabled' : '') +
+        ' data-time="' + t + '">' + fmtTime(t) + '</button>';
+    });
+    html += '</div>';
+
+    html += '<div class="form-actions">' +
+      '<button class="a-btn a-btn-pri" data-action="to-details"' + (!state.selectedTime ? ' disabled' : '') + '>' +
+        'Continue' + icon('arrow',15) +
+      '</button>' +
+      '<button class="a-btn a-btn-out" data-action="simulate-race" title="Demonstrates the 409 conflict handling">' +
+        icon('bolt',15) + 'Simulate another customer taking this slot' +
+      '</button>' +
+    '</div>';
+
+    html += '</div>';
+  }
+
+  /* ---- STEP 2 ---- */
+  if (step === 2){
+    html += '<div class="a-card a-card-pad">';
+    html += '<div style="font-size:.8rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--a-dim);margin-bottom:14px">Your details</div>';
+    html += '<div class="form-grid">' +
+      field('name', 'Full name', 'text', 'Alex Carter', true) +
+      field('email', 'Email', 'email', 'alex@example.com', true) +
+      field('phone', 'Phone', 'tel', '0400 111 222', true) +
+      field('address', 'Service address', 'text', '7 Paddington St, Paddington', true) +
+      '<div class="field full"><label>Notes for the team <span style="color:var(--a-dim);font-weight:500">(optional)</span></label>' +
+        '<textarea id="f_notes" placeholder="Anything we should know — parking, pets, access…"></textarea></div>' +
+    '</div>';
+
+    html += '<div class="field full" style="margin-top:14px">' +
+      '<label>Photo <span style="color:var(--a-dim);font-weight:500">(optional)</span></label>' +
+      '<div class="upload-box" data-action="fake-upload">' + icon('upload',22) +
+        '<b>Upload a photo</b><span>JPG or PNG, up to 10 MB</span>' +
+      '</div>' +
+    '</div>';
+
+    html += '<div class="pay-row">' +
+      '<input type="checkbox" id="payNow">' +
+      '<div class="pay-txt"><b>Pay now with card — $' + s.price + '</b>' +
+      '<span>Secure Stripe checkout. You can also pay after the job.</span></div>' +
+      icon('card',20) +
+    '</div>';
+
+    html += '<div class="form-actions">' +
+      '<button class="a-btn a-btn-out" data-action="back-to-time">' + icon('back',14) + 'Back</button>' +
+      '<button class="a-btn a-btn-pri" data-action="submit-booking">Confirm booking</button>' +
+    '</div>';
+    html += '</div>';
+  }
+
+  /* ---- STEP 3 (also handled by viewConfirmed, but keep safe) ---- */
+  if (step === 3){
+    html += viewConfirmed();
+  }
+
+  return html;
+}
+
+function stepDot(n, label, current){
+  const cls = n < current ? 'done' : (n === current ? 'on' : '');
+  const inner = n < current ? icon('check',14) : n;
+  return '<div class="step ' + cls + '"><span class="step-num">' + inner + '</span><span class="step-lbl">' + label + '</span></div>';
+}
+
+function field(id, label, type, ph, required){
+  return '<div class="field" id="wrap_' + id + '">' +
+    '<label>' + label + (required ? ' <span>*</span>' : '') + '</label>' +
+    '<input type="' + type + '" id="f_' + id + '" placeholder="' + ph + '">' +
+    '<span class="err-msg">This field is required</span>' +
+  '</div>';
+}
+
+/* ============================================================
+   VIEW — CUSTOMER: CONFIRMED
+   ============================================================ */
+function viewConfirmed(){
+  const b = state.lastBooking;
+  if (!b) return '<div class="a-page-head"><h3>No booking found</h3></div>';
+  const s = state.services.find(x => x.id === b.service);
+  return '' +
+  '<div class="confirm-box">' +
+    '<div class="confirm-ico">' + icon('check', 34) + '</div>' +
+    '<h3>Booking request sent</h3>' +
+    '<p>We\'ve emailed a confirmation to <strong>' + b.email + '</strong>. Our team will review and confirm shortly.</p>' +
+    '<div class="confirm-card">' +
+      row('Service', s ? s.name : b.service) +
+      row('Date', fmtLong(new Date(b.date + 'T00:00:00'))) +
+      row('Time', fmtTime(b.time)) +
+      row('Address', b.address) +
+      row('Total', '$' + (s ? s.price : 0) + (b.paid ? ' — paid' : ' — pay after service')) +
+      row('Status', 'Pending confirmation') +
+    '</div>' +
+    '<div class="form-actions" style="justify-content:center">' +
+      '<button class="a-btn a-btn-pri" data-nav="mybookings">View my bookings</button>' +
+      '<button class="a-btn a-btn-out" data-action="back-to-services">Book another service</button>' +
+    '</div>' +
+  '</div>';
+}
+function row(label, val){
+  return '<div class="confirm-row"><span>' + label + '</span><b>' + val + '</b></div>';
+}
+
+/* ============================================================
+   VIEW — CUSTOMER: MY BOOKINGS
+   ============================================================ */
+function viewMyBookings(){
+  const mine = state.bookings.filter(b => b.mine);
+  const todayISO = iso(TODAY);
+  const upcoming = mine.filter(b => b.date >= todayISO && b.status !== 'cancelled')
+                       .sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const past = mine.filter(b => b.date < todayISO || b.status === 'completed' || b.status === 'cancelled')
+                   .sort((a,b) => (b.date + b.time).localeCompare(a.date + a.time));
+
+  const list = state.myTab === 'upcoming' ? upcoming : past;
+
+  let html = '<div class="a-page-head"><h3>My bookings</h3><p>Manage your upcoming and past appointments.</p></div>';
+  html += '<div class="tab-row">' +
+    '<button class="tab' + (state.myTab === 'upcoming' ? ' on' : '') + '" data-tab="upcoming">Upcoming (' + upcoming.length + ')</button>' +
+    '<button class="tab' + (state.myTab === 'past' ? ' on' : '') + '" data-tab="past">Past (' + past.length + ')</button>' +
+  '</div>';
+
+  if (!list.length){
+    html += '<div class="denied" style="padding:50px 20px">' +
+      '<div class="denied-ico" style="background:var(--a-primary-soft);color:var(--a-primary)">' + icon('calendar',30) + '</div>' +
+      '<h3>Nothing here yet</h3>' +
+      '<p>' + (state.myTab === 'upcoming' ? 'You have no upcoming bookings.' : 'No past bookings to show.') + '</p>' +
+      '<button class="a-btn a-btn-pri" data-action="back-to-services">Book a service</button>' +
+    '</div>';
+    return html;
+  }
+
+  list.forEach(b => {
+    const d = new Date(b.date + 'T00:00:00');
+    const s = state.services.find(x => x.id === b.service);
+    const canModify = (b.status === 'pending' || b.status === 'confirmed') && b.date >= todayISO;
+    html += '<div class="bk-card">' +
+      '<div class="bk-when">' +
+        '<b>' + fmtNum(d) + '</b>' +
+        '<span>' + fmtMonthShort(d) + '</span>' +
+        '<em>' + fmtTime(b.time) + '</em>' +
+      '</div>' +
+      '<div class="bk-info">' +
+        '<h4>' + (s ? s.name : b.service) + '</h4>' +
+        '<div class="bk-meta">' +
+          '<span>' + icon('calendar',13) + fmtLong(d) + '</span>' +
+          '<span>' + icon('clock',13) + fmtTime(b.time) + '</span>' +
+          '<span>' + icon('pin',13) + b.address + '</span>' +
+        '</div>' +
+        '<span class="a-badge ' + b.status + '">' + b.status + '</span>' +
+        (b.notes ? '<div style="font-size:.78rem;color:var(--a-muted);margin-top:8px">Note: ' + b.notes + '</div>' : '') +
+        (canModify ?
+          '<div class="bk-actions">' +
+            '<button class="a-btn a-btn-out a-btn-sm" data-reschedule="' + b.id + '">Reschedule</button>' +
+            '<button class="a-btn a-btn-danger a-btn-sm" data-cancel="' + b.id + '">Cancel</button>' +
+          '</div>' : '') +
+      '</div>' +
+    '</div>';
+  });
+
+  return html;
+}
+
+/* ============================================================
+   VIEW — ADMIN: DASHBOARD
+   ============================================================ */
+function visibleBookings(){
+  if (state.role === 'staff') return state.bookings.filter(b => b.staff === 1); // Maria
+  return state.bookings;
+}
+
+function viewDashboard(){
+  const todayISO = iso(TODAY);
+  const bks = visibleBookings();
+  const todays = bks.filter(b => b.date === todayISO && b.status !== 'cancelled');
+  const pending = bks.filter(b => b.status === 'pending');
+  const weekEnd = iso(dayAt(7));
+  const weekBks = bks.filter(b => b.date >= todayISO && b.date <= weekEnd && b.status !== 'cancelled');
+  const revenue = weekBks.filter(b => b.paid || b.status === 'completed')
+                         .reduce((sum, b) => sum + svcPrice(b.service), 0);
+
+  let html = '';
+
+  if (state.role === 'staff'){
+    html += '<div class="role-notice green">' + icon('shield',17) +
+      '<span>You\'re signed in as <strong>Staff</strong>. You can only see and update bookings assigned to you.</span></div>';
+  }
+
+  html += '<div class="stat-grid">' +
+    statCard('blue',   'calendar', 'Today',        todays.length,    'bookings scheduled') +
+    statCard('amber',  'clock',    'Pending',      pending.length,   'awaiting confirmation') +
+    statCard('green',  'check',    'This week',    weekBks.length,   'confirmed jobs') +
+    (can('viewRevenue')
+      ? statCard('violet', 'card', 'Revenue',     '$' + revenue,    'this week')
+      : statCard('violet', 'card', 'Completed',   bks.filter(b => b.status === 'completed').length, 'all time')) +
+  '</div>';
+
+  html += '<div class="dash-cols">';
+
+  /* Recent bookings */
+  html += '<div class="panel"><div class="panel-head"><b>Recent bookings</b><span>Live</span></div><div class="panel-body">';
+  const recent = bks.slice().sort((a,b) => b.id - a.id).slice(0, 5);
+  recent.forEach(b => { html += bookingRow(b); });
+  html += '</div></div>';
+
+  /* Today */
+  html += '<div class="panel"><div class="panel-head"><b>Today\'s schedule</b><span>' + todays.length + ' jobs</span></div><div class="panel-body">';
+  if (!todays.length){
+    html += '<div class="cal-empty">No bookings scheduled for today.</div>';
+  } else {
+    todays.slice().sort((a,b) => a.time.localeCompare(b.time)).forEach(b => { html += bookingRow(b); });
+  }
+  html += '</div></div>';
+
+  html += '</div>';
+  return html;
+}
+
+function statCard(color, ic, label, val, sub){
+  return '<div class="stat-card">' +
+    '<div class="sc-top"><span class="sc-ico ' + color + '">' + icon(ic,17) + '</span></div>' +
+    '<div class="sc-lbl">' + label + '</div>' +
+    '<div class="sc-val">' + val + '</div>' +
+    '<div class="sc-sub">' + sub + '</div>' +
+  '</div>';
+}
+
+function bookingRow(b){
+  const st = STAFF.find(s => s.id === b.staff) || { initials:'—', color:'c1' };
+  const d = new Date(b.date + 'T00:00:00');
+  return '<div class="row">' +
+    '<span class="row-av ' + st.color + '">' + st.initials + '</span>' +
+    '<div class="row-info">' +
+      '<b>' + b.customer + ' — ' + svcName(b.service) + '</b>' +
+      '<span>' + fmtDayShort(d) + ' ' + fmtNum(d) + ' ' + fmtMonthShort(d) + ' · ' + fmtTime(b.time) + ' · ' + staffName(b.staff) + '</span>' +
+    '</div>' +
+    '<span class="a-badge ' + b.status + '">' + b.status + '</span>' +
+  '</div>';
+}
+
+/* ============================================================
+   VIEW — ADMIN: BOOKINGS
+   ============================================================ */
+function viewBookings(){
+  const bks = visibleBookings();
+  const filter = state.bookFilter;
+  const q = state.search.toLowerCase().trim();
+
+  let list = filter === 'all' ? bks.slice() : bks.filter(b => b.status === filter);
+  if (q){
+    list = list.filter(b =>
+      b.customer.toLowerCase().includes(q) ||
+      svcName(b.service).toLowerCase().includes(q) ||
+      b.address.toLowerCase().includes(q)
+    );
+  }
+  list.sort((a,b) => (b.date + b.time).localeCompare(a.date + a.time));
+
+  const counts = {
+    all: bks.length,
+    pending: bks.filter(b => b.status === 'pending').length,
+    confirmed: bks.filter(b => b.status === 'confirmed').length,
+    completed: bks.filter(b => b.status === 'completed').length,
+    cancelled: bks.filter(b => b.status === 'cancelled').length
+  };
+
+  let html = '';
+  if (state.role === 'staff'){
+    html += '<div class="role-notice green">' + icon('shield',17) +
+      '<span>Staff view — you see only your assigned jobs. Confirm and cancel actions are <strong>owner-only</strong>.</span></div>';
+  }
+
+  html += '<div class="filter-row">' +
+    ['all','pending','confirmed','completed','cancelled'].map(f =>
+      '<button class="filter-btn' + (filter === f ? ' on' : '') + '" data-filter="' + f + '">' +
+        f.charAt(0).toUpperCase() + f.slice(1) + ' (' + counts[f] + ')' +
+      '</button>'
+    ).join('') +
+  '</div>';
+
+  html += '<div class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+    '<th>Customer</th><th>Service</th><th>Date &amp; time</th><th>Assigned</th><th>Status</th><th style="text-align:right">Actions</th>' +
+  '</tr></thead><tbody>';
+
+  if (!list.length){
+    html += '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--a-dim)">No bookings match this filter.</td></tr>';
+  }
+
+  list.forEach(b => {
+    const st = STAFF.find(s => s.id === b.staff) || { initials:'—', color:'c1' };
+    const d = new Date(b.date + 'T00:00:00');
+    html += '<tr>' +
+      '<td><div class="cell-cust"><span class="cc-av">' + initials(b.customer) + '</span>' +
+        '<div><b>' + b.customer + '</b><span>' + b.email + '</span></div></div></td>' +
+      '<td>' + svcName(b.service) + '</td>' +
+      '<td>' + fmtDayShort(d) + ' ' + fmtNum(d) + ' ' + fmtMonthShort(d) + '<br><span style="font-size:.75rem;color:var(--a-muted)">' + fmtTime(b.time) + '</span></td>' +
+      '<td><div class="cell-cust"><span class="cc-av ' + st.color + '" style="background:linear-gradient(140deg,#64748b,#94a3b8)">' + st.initials + '</span>' +
+        '<b style="font-size:.8rem">' + staffName(b.staff) + '</b></div></td>' +
+      '<td><span class="a-badge ' + b.status + '">' + b.status + '</span></td>' +
+      '<td><div class="cell-actions">' + actionsFor(b) + '</div></td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+function initials(name){
+  return name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+}
+
+function actionsFor(b){
+  const out = [];
+  if (b.status === 'pending'){
+    if (can('confirmBookings')) out.push('<button class="a-btn a-btn-ok a-btn-sm" data-confirm="' + b.id + '">Confirm</button>');
+    if (can('rescheduleBookings')) out.push('<button class="a-btn a-btn-out a-btn-sm" data-move="' + b.id + '">Reschedule</button>');
+    if (can('cancelBookings')) out.push('<button class="a-btn a-btn-danger a-btn-sm" data-cancel-admin="' + b.id + '">Cancel</button>');
+  } else if (b.status === 'confirmed'){
+    if (can('completeBookings')) out.push('<button class="a-btn a-btn-ok a-btn-sm" data-complete="' + b.id + '">Complete</button>');
+    if (can('rescheduleBookings')) out.push('<button class="a-btn a-btn-out a-btn-sm" data-move="' + b.id + '">Reschedule</button>');
+    if (can('cancelBookings')) out.push('<button class="a-btn a-btn-danger a-btn-sm" data-cancel-admin="' + b.id + '">Cancel</button>');
+  }
+  if (!out.length) out.push('<span style="font-size:.75rem;color:var(--a-dim)">No actions</span>');
+  return out.join('');
+}
+
+/* ============================================================
+   VIEW — ADMIN: CALENDAR
+   ============================================================ */
+function viewCalendar(){
+  const bks = visibleBookings();
+  let html = '';
+  if (state.role === 'staff'){
+    html += '<div class="role-notice green">' + icon('shield',17) + '<span>Showing only your assigned jobs.</span></div>';
+  }
+
+  html += '<div class="tbl-wrap"><div class="cal-wrap">';
+  for (let i = 0; i < 7; i++){
+    const d = dayAt(i);
+    const dISO = iso(d);
+    const isToday = i === 0;
+    const items = bks.filter(b => b.date === dISO && b.status !== 'cancelled').sort((a,b) => a.time.localeCompare(b.time));
+
+    html += '<div class="cal-col' + (isToday ? ' today' : '') + '">' +
+      '<div class="cal-col-head"><span>' + fmtDayShort(d) + '</span><b>' + fmtNum(d) + '</b></div>' +
+      '<div class="cal-items">';
+    if (!items.length){
+      html += '<div class="cal-empty">Free</div>';
+    } else {
+      items.forEach(b => {
+        html += '<div class="cal-item ' + b.status + '">' +
+          '<b>' + fmtTime(b.time) + '</b>' +
+          '<span>' + b.customer + '</span>' +
+          '<span>' + svcName(b.service) + '</span>' +
+        '</div>';
+      });
+    }
+    html += '</div></div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
+/* ============================================================
+   VIEW — ADMIN: CUSTOMERS
+   ============================================================ */
+function viewCustomers(){
+  const q = state.search.toLowerCase().trim();
+  const map = {};
+  visibleBookings().forEach(b => {
+    if (!map[b.email]) map[b.email] = { name:b.customer, email:b.email, phone:b.phone, count:0, total:0, last:b.date };
+    map[b.email].count++;
+    if (b.status === 'completed' || b.paid) map[b.email].total += svcPrice(b.service);
+    if (b.date > map[b.email].last) map[b.email].last = b.date;
+  });
+  let list = Object.values(map);
+  if (q) list = list.filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
+  list.sort((a,b) => b.count - a.count);
+
+  let html = '';
+  if (state.role === 'staff'){
+    html += '<div class="role-notice green">' + icon('shield',17) + '<span>Staff view — customer records for your assigned jobs only.</span></div>';
+  }
+  html += '<div class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+    '<th>Customer</th><th>Phone</th><th>Bookings</th><th>Total value</th><th>Last booking</th>' +
+  '</tr></thead><tbody>';
+  if (!list.length){
+    html += '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--a-dim)">No customers found.</td></tr>';
+  }
+  list.forEach(c => {
+    const d = new Date(c.last + 'T00:00:00');
+    html += '<tr>' +
+      '<td><div class="cell-cust"><span class="cc-av">' + initials(c.name) + '</span>' +
+        '<div><b>' + c.name + '</b><span>' + c.email + '</span></div></div></td>' +
+      '<td style="font-size:.82rem;color:var(--a-muted)">' + c.phone + '</td>' +
+      '<td>' + c.count + '</td>' +
+      '<td style="font-weight:700">$' + c.total + '</td>' +
+      '<td style="font-size:.82rem;color:var(--a-muted)">' + fmtLong(d) + '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+/* ============================================================
+   VIEW — ADMIN: SERVICES (owner only)
+   ============================================================ */
+function viewServices(){
+  let html = '<div class="role-notice">' + icon('shield',17) +
+    '<span>Owner-only screen. Staff accounts receive <code style="background:#fff;padding:2px 6px;border-radius:4px;font-size:.75rem">403 Forbidden</code> if they call this API directly.</span></div>';
+
+  html += '<div class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+    '<th>Service</th><th>Duration</th><th>Price</th><th style="text-align:right">Actions</th>' +
+  '</tr></thead><tbody>';
+  state.services.forEach(s => {
+    html += '<tr>' +
+      '<td><div class="cell-cust"><span class="cc-av" style="font-size:1rem;background:var(--a-primary-soft);color:var(--a-primary)">' + s.icon + '</span>' +
+        '<div><b>' + s.name + '</b><span>' + s.desc + '</span></div></div></td>' +
+      '<td style="color:var(--a-muted)">' + s.dur + '</td>' +
+      '<td style="font-weight:800;color:var(--a-primary)">$' + s.price + '</td>' +
+      '<td><div class="cell-actions"><button class="a-btn a-btn-out a-btn-sm" data-edit-svc="' + s.id + '">Edit</button></div></td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+/* ============================================================
+   VIEW — ADMIN: STAFF (owner only)
+   ============================================================ */
+function viewStaff(){
+  let html = '<div class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+    '<th>Team member</th><th>Role</th><th>Assigned jobs</th><th>Status</th>' +
+  '</tr></thead><tbody>';
+  state.staff.forEach(s => {
+    const count = state.bookings.filter(b => b.staff === s.id && b.status !== 'cancelled').length;
+    html += '<tr>' +
+      '<td><div class="cell-cust"><span class="cc-av ' + s.color + '" style="background:linear-gradient(140deg,#0ea5e9,#22d3ee)">' + s.initials + '</span>' +
+        '<div><b>' + s.name + '</b><span>' + s.role + '</span></div></div></td>' +
+      '<td>' + s.role + '</td>' +
+      '<td>' + count + '</td>' +
+      '<td><span class="a-badge completed">Active</span></td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+/* ============================================================
+   VIEW — ADMIN: SETTINGS (owner only)
+   ============================================================ */
+function viewSettings(){
+  let html = '<div class="panel a-card-pad" style="margin-bottom:16px">' +
+    '<div style="font-size:.8rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--a-dim);margin-bottom:14px">Working hours</div>' +
+    '<div style="display:grid;gap:10px">';
+  state.settings.hours.forEach((h, i) => {
+    html += '<div style="display:flex;align-items:center;gap:14px;padding:11px 14px;border:1px solid var(--a-brd);border-radius:11px;background:var(--a-surface)">' +
+      '<input type="checkbox"' + (h.open ? ' checked' : '') + ' data-hours-toggle="' + i + '" style="width:18px;height:18px;accent-color:var(--a-primary)">' +
+      '<b style="width:90px;font-size:.86rem">' + h.day + '</b>' +
+      (h.open
+        ? '<span style="font-size:.84rem;color:var(--a-muted)">' + h.from + ' – ' + h.to + '</span>'
+        : '<span style="font-size:.84rem;color:var(--a-dim)">Closed</span>') +
+    '</div>';
+  });
+  html += '</div></div>';
+
+  html += '<div class="panel a-card-pad">' +
+    '<div style="font-size:.8rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--a-dim);margin-bottom:14px">Booking rules</div>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">' +
+      '<div><b style="font-size:.88rem">Slot duration</b><span style="display:block;font-size:.78rem;color:var(--a-muted)">How long each bookable window lasts</span></div>' +
+      '<select id="slotMins" style="padding:9px 13px;border-radius:10px;border:1.5px solid var(--a-brd);font:inherit;font-size:.84rem;background:var(--a-surface)">' +
+        [30,60,90,120].map(m => '<option value="' + m + '"' + (state.settings.slotMins === m ? ' selected' : '') + '>' + m + ' minutes</option>').join('') +
+      '</select>' +
+    '</div>' +
+  '</div>';
+
+  return html;
+}
+
+/* ============================================================
+   VIEW — ACCESS DENIED
+   ============================================================ */
+function viewDenied(perm){
+  return '<div class="denied">' +
+    '<div class="denied-ico">' + icon('lock',30) + '</div>' +
+    '<h3>Access denied</h3>' +
+    '<p>Your account doesn\'t have permission to view this area. The API enforces this with a policy — hiding the menu item is only cosmetic.</p>' +
+    '<code>[Authorize(Policy = "' + (perm === 'manageServices' ? 'CanManageServices' : perm === 'manageStaff' ? 'CanManageStaff' : 'CanManageSettings') + '")]</code>' +
+    '<button class="a-btn a-btn-pri" data-nav="dashboard">Back to dashboard</button>' +
+  '</div>';
+}
+
+/* ============================================================
+   RESCHEDULE MODAL — proper functionality
+   ============================================================ */
+function openRescheduleModal(bookingId){
+  const b = state.bookings.find(x => x.id === bookingId);
+  if (!b) return;
+
+  /* local state for the modal */
+  var rsDate = b.date;
+  var rsTime = null;
+  var rsBooking = b;
+
+  function renderModal(){
+    /* build date strip — 14 days from today */
+    let dateHtml = '';
+    for (var i = 0; i < 14; i++){
+      var d = dayAt(i);
+      var dISO = iso(d);
+      var on = dISO === rsDate;
+      dateHtml += '<button class="resched-date' + (on ? ' on' : '') + '" data-rs-date="' + dISO + '">' +
+        '<span>' + fmtDayShort(d) + '</span>' +
+        '<b>' + fmtNum(d) + '</b>' +
+      '</button>';
+    }
+
+    /* build slot grid */
+    let slotHtml = '';
+    TIMES.forEach(function(t){
+      var taken = !isFree(rsDate, t) && !(rsDate === b.date && t === b.time);
+      var on = rsTime === t;
+      slotHtml += '<button class="resched-slot' + (on ? ' on' : '') + '"' + (taken ? ' disabled' : '') +
+        ' data-rs-time="' + t + '">' + fmtTime(t) + '</button>';
+    });
+
+    var summaryHtml = '';
+    if (rsTime){
+      summaryHtml = '<div class="resched-summary">' + icon('check',18) +
+        '<span>Moving <strong>' + b.customer + '</strong> to <strong>' +
+        fmtLong(new Date(rsDate + 'T00:00:00')) + '</strong> at <strong>' + fmtTime(rsTime) + '</strong></span></div>';
+    } else {
+      summaryHtml = '<div class="resched-summary" style="background:#f8fafd;border-color:var(--a-brd);color:var(--a-muted)">' +
+        icon('clock',18) + '<span>Pick a new date and time to continue.</span></div>';
+    }
+
+    var root = document.getElementById('modalRoot');
+    root.innerHTML =
+      '<div class="modal-bg" id="reschedBg">' +
+        '<div class="resched-modal">' +
+          '<div class="resched-head">' +
+            '<div>' +
+              '<h3>Reschedule booking</h3>' +
+              '<p>' + b.customer + ' · ' + svcName(b.service) + ' · currently ' +
+                fmtDayShort(new Date(b.date + 'T00:00:00')) + ' ' + fmtNum(new Date(b.date + 'T00:00:00')) + ' ' +
+                fmtMonthShort(new Date(b.date + 'T00:00:00')) + ' at ' + fmtTime(b.time) + '</p>' +
+            '</div>' +
+            '<button class="resched-close" id="reschedClose">' + icon('x',18) + '</button>' +
+          '</div>' +
+          '<div class="resched-body">' +
+            '<div class="resched-section-label">New date</div>' +
+            '<div class="resched-date-strip">' + dateHtml + '</div>' +
+            '<div class="resched-section-label">New time</div>' +
+            '<div class="resched-slots">' + slotHtml + '</div>' +
+            summaryHtml +
+            '<div class="resched-actions">' +
+              '<button class="a-btn a-btn-out" id="reschedCancel">Cancel</button>' +
+              '<button class="a-btn a-btn-pri" id="reschedConfirm"' + (!rsTime ? ' disabled' : '') + '>' +
+                icon('check',15) + 'Confirm reschedule' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    /* bind events */
+    root.querySelectorAll('[data-rs-date]').forEach(function(el){
+      el.onclick = function(){
+        rsDate = el.dataset.rsDate;
+        rsTime = null;
+        renderModal();
+      };
+    });
+
+    root.querySelectorAll('[data-rs-time]').forEach(function(el){
+      el.onclick = function(){
+        rsTime = el.dataset.rsTime;
+        renderModal();
+      };
+    });
+
+    document.getElementById('reschedClose').onclick = closeReschedModal;
+    document.getElementById('reschedCancel').onclick = closeReschedModal;
+    document.getElementById('reschedBg').addEventListener('click', function(e){
+      if (e.target.id === 'reschedBg') closeReschedModal();
+    });
+
+    var confirmBtn = document.getElementById('reschedConfirm');
+    if (confirmBtn){
+      confirmBtn.onclick = function(){
+        if (!rsTime) return;
+
+        /* re-check availability one more time */
+        if (!isFree(rsDate, rsTime) && !(rsDate === b.date && rsTime === b.time)){
+          toast('error', 'Slot no longer available', 'Someone else booked that time. Please pick another.');
+          rsTime = null;
+          renderModal();
+          return;
+        }
+
+        var oldDate = b.date;
+        var oldTime = b.time;
+
+        /* update the booking */
+        b.date = rsDate;
+        b.time = rsTime;
+        b.notes = b.notes ? b.notes + ' | Rescheduled from ' + oldDate + ' ' + oldTime : 'Rescheduled from ' + oldDate + ' ' + oldTime;
+
+        closeReschedModal();
+        render();
+        toast('success', 'Booking rescheduled',
+          b.customer + '\'s booking moved from ' + fmtDayShort(new Date(oldDate + 'T00:00:00')) + ' ' + fmtTime(oldTime) +
+          ' to ' + fmtDayShort(new Date(rsDate + 'T00:00:00')) + ' ' + fmtNum(new Date(rsDate + 'T00:00:00')) + ' ' +
+          fmtMonthShort(new Date(rsDate + 'T00:00:00')) + ' at ' + fmtTime(rsTime) + '.');
+      };
+    }
+  }
+
+  renderModal();
+}
+
+function closeReschedModal(){
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+/* ============================================================
+   INTERACTIONS
+   ============================================================ */
+document.addEventListener('click', function(e){
+  const t = e.target.closest('[data-nav],[data-role],[data-svc],[data-date],[data-time],[data-action],[data-tab],[data-filter],[data-reschedule],[data-cancel],[data-confirm],[data-complete],[data-cancel-admin],[data-move],[data-edit-svc]');
+  if (!t) return;
+
+  /* ---- role switch ---- */
+  if (t.dataset.role){
+    state.role = t.dataset.role;
+    document.querySelectorAll('#roleSwitch .role-btn').forEach(b => b.classList.toggle('on', b === t));
+    const nav = NAV[state.role];
+    state.screen = nav[0].id;
+    state.search = '';
+    document.getElementById('searchInput').value = '';
+    render();
+    return;
+  }
+
+  /* ---- navigation ---- */
+  if (t.dataset.nav){
+    state.screen = t.dataset.nav;
+    state.bookStep = 1;
+    render();
+    return;
+  }
+
+  /* ---- pick service ---- */
+  if (t.dataset.svc){
+    state.selectedService = t.dataset.svc;
+    state.selectedDate = iso(dayAt(0));
+    state.selectedTime = null;
+    state.bookStep = 1;
+    state.screen = 'book';
+    render();
+    return;
+  }
+
+  /* ---- pick date ---- */
+  if (t.dataset.date){
+    state.selectedDate = t.dataset.date;
+    state.selectedTime = null;
+    clearHold();
+    render();
+    return;
+  }
+
+  /* ---- pick time ---- */
+  if (t.dataset.time){
+    const time = t.dataset.time;
+    if (!isFree(state.selectedDate, time)){
+      toast('error', 'Slot no longer available', 'That time was just booked by someone else. Please choose another.');
+      render();
+      return;
+    }
+    state.selectedTime = time;
+    startHold();
+    render();
+    return;
+  }
+
+  /* ---- actions ---- */
+  if (t.dataset.action){
+    handleAction(t.dataset.action, t);
+    return;
+  }
+
+  /* ---- tabs ---- */
+  if (t.dataset.tab){
+    state.myTab = t.dataset.tab;
+    render();
+    return;
+  }
+
+  /* ---- admin filters ---- */
+  if (t.dataset.filter){
+    state.bookFilter = t.dataset.filter;
+    render();
+    return;
+  }
+
+  /* ---- admin booking actions ---- */
+  if (t.dataset.confirm){
+    const b = state.bookings.find(x => x.id === +t.dataset.confirm);
+    if (b){ b.status = 'confirmed'; toast('success', 'Booking confirmed', b.customer + '\'s booking is confirmed. A confirmation email has been sent.'); }
+    render();
+    return;
+  }
+  if (t.dataset.complete){
+    const b = state.bookings.find(x => x.id === +t.dataset.complete);
+    if (b){ b.status = 'completed'; b.paid = true; toast('success', 'Job completed', 'Booking marked complete. Payment recorded.'); }
+    render();
+    return;
+  }
+  if (t.dataset.cancelAdmin){
+    const b = state.bookings.find(x => x.id === +t.dataset.cancelAdmin);
+    if (b){
+      openModal('Cancel this booking?', 'This will free the slot immediately and notify the customer by email.', 'Cancel booking', function(){
+        b.status = 'cancelled';
+        toast('success', 'Booking cancelled', 'The customer has been notified and the slot is available again.');
+        closeModal();
+        render();
+      });
+    }
+    return;
+  }
+  /* ---- RESCHEDULE — proper modal ---- */
+  if (t.dataset.move){
+    openRescheduleModal(+t.dataset.move);
+    return;
+  }
+  if (t.dataset.reschedule){
+    const b = state.bookings.find(x => x.id === +t.dataset.reschedule);
+    if (b){
+      openRescheduleModal(b.id);
+    }
+    return;
+  }
+  if (t.dataset.cancel){
+    const b = state.bookings.find(x => x.id === +t.dataset.cancel);
+    if (b){
+      openModal('Cancel this booking?', 'Your slot will be released and the team will be notified.', 'Yes, cancel it', function(){
+        b.status = 'cancelled';
+        toast('success', 'Booking cancelled', 'We\'ve emailed you a cancellation confirmation.');
+        closeModal();
+        render();
+      });
+    }
+    return;
+  }
+  if (t.dataset.editSvc){
+    const s = state.services.find(x => x.id === t.dataset.editSvc);
+    if (s){
+      openModal('Edit price — ' + s.name, 'In the full app this opens a full service editor. For the demo, prices update in place.', 'Increase by $10', function(){
+        s.price += 10;
+        toast('success', 'Service updated', s.name + ' is now $' + s.price + '.');
+        closeModal();
+        render();
+      });
+    }
+    return;
+  }
+});
+
+function handleAction(action, el){
+  if (action === 'back-to-services'){
+    state.screen = 'services';
+    state.bookStep = 1;
+    state.selectedTime = null;
+    clearHold();
+    render();
+    return;
+  }
+  if (action === 'to-details'){
+    if (!state.selectedTime){ toast('error','Pick a time first','Choose an available slot to continue.'); return; }
+    state.bookStep = 2;
+    render();
+    return;
+  }
+  if (action === 'back-to-time'){
+    state.bookStep = 1;
+    render();
+    return;
+  }
+  if (action === 'fake-upload'){
+    toast('info', 'Photo attached', 'photo-kitchen.jpg — 1.2 MB uploaded to secure storage.');
+    return;
+  }
+  if (action === 'simulate-race'){
+    if (!state.selectedTime){
+      toast('error', 'Pick a slot first', 'Choose a time slot, then simulate another customer grabbing it.');
+      return;
+    }
+    state.bookings.push({
+      id: 9000 + Math.floor(Math.random()*1000),
+      customer:'Another Customer', email:'other@example.com', phone:'0400 000 000',
+      service:'regular', date: state.selectedDate, time: state.selectedTime,
+      staff:2, status:'confirmed', address:'—', paid:true, mine:false, notes:''
+    });
+    state.selectedTime = null;
+    clearHold();
+    render();
+    toast('error', 'Slot just taken — 409 Conflict',
+      'Another customer booked this time a moment ago. The database rejected the duplicate and we\'ve refreshed your options.');
+    return;
+  }
+  if (action === 'submit-booking'){
+    submitBooking();
+    return;
+  }
+}
+
+/* ---- form validation + submit ---- */
+function submitBooking(){
+  const required = ['name','email','phone','address'];
+  let ok = true;
+  required.forEach(id => {
+    const input = document.getElementById('f_' + id);
+    const wrap = document.getElementById('wrap_' + id);
+    if (!input) return;
+    const val = input.value.trim();
+    const invalid = !val || (id === 'email' && !/^\S+@\S+\.\S+$/.test(val));
+    input.classList.toggle('err', invalid);
+    wrap.classList.toggle('has-err', invalid);
+    if (invalid) ok = false;
+  });
+  if (!ok){
+    toast('error', 'Check your details', 'Some required fields need your attention.');
+    return;
+  }
+
+  if (!isFree(state.selectedDate, state.selectedTime)){
+    toast('error', 'Slot just taken — 409 Conflict', 'That time was booked while you were filling in the form. Please pick another.');
+    state.bookStep = 1;
+    state.selectedTime = null;
+    clearHold();
+    render();
+    return;
+  }
+
+  const name = document.getElementById('f_name').value.trim();
+  const email = document.getElementById('f_email').value.trim();
+  const phone = document.getElementById('f_phone').value.trim();
+  const address = document.getElementById('f_address').value.trim();
+  const notes = (document.getElementById('f_notes') || {}).value || '';
+  const paid = document.getElementById('payNow') && document.getElementById('payNow').checked;
+
+  const booking = {
+    id: 2000 + Math.floor(Math.random()*1000),
+    customer: name, email, phone,
+    service: state.selectedService,
+    date: state.selectedDate,
+    time: state.selectedTime,
+    staff: 1,
+    status: 'pending',
+    address, paid, mine: true, notes
+  };
+
+  if (state.editingBookingId){
+    const old = state.bookings.find(b => b.id === state.editingBookingId);
+    if (old){ old.status = 'cancelled'; old.notes = 'Rescheduled to ' + state.selectedDate + ' ' + state.selectedTime; }
+    state.editingBookingId = null;
+  }
+
+  state.bookings.push(booking);
+  state.lastBooking = booking;
+  state.bookStep = 3;
+  state.screen = 'confirmed';
+  clearHold();
+
+  render();
+  toast('success', paid ? 'Payment received' : 'Booking request sent',
+    paid ? 'Stripe payment confirmed. A receipt and booking confirmation are on their way to ' + email + '.'
+         : 'We\'ve emailed ' + email + ' — our team will confirm shortly.');
+}
+
+/* ---- hold timer ---- */
+function startHold(){
+  clearHold();
+  state.heldUntil = Date.now() + 5 * 60 * 1000;
+  state.holdTimer = setInterval(function(){
+    if (!state.heldUntil || Date.now() >= state.heldUntil){
+      clearHold();
+      state.selectedTime = null;
+      render();
+      toast('info', 'Hold expired', 'Your 5-minute hold on that slot has ended. Please pick a time again.');
+      return;
+    }
+    const el = document.getElementById('holdClock');
+    if (el){
+      const left = Math.max(0, Math.ceil((state.heldUntil - Date.now())/1000));
+      el.textContent = String(Math.floor(left/60)).padStart(2,'0') + ':' + String(left%60).padStart(2,'0');
+    }
+  }, 1000);
+}
+function clearHold(){
+  if (state.holdTimer){ clearInterval(state.holdTimer); state.holdTimer = null; }
+  state.heldUntil = null;
+}
+
+/* ---- search ---- */
+document.addEventListener('input', function(e){
+  if (e.target.id === 'searchInput'){
+    state.search = e.target.value;
+    renderView();
+  }
+});
+
+/* ---- toast ---- */
+function toast(type, title, msg){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type === 'error' ? 'error' : type === 'success' ? 'success' : '');
+  const ico = type === 'error'
+    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>'
+    : type === 'success'
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg>';
+  el.innerHTML = '<span class="t-ico">' + ico + '</span><div><b>' + title + '</b><p>' + msg + '</p></div>';
+  wrap.appendChild(el);
+  setTimeout(function(){
+    el.style.transition = 'opacity .35s, transform .35s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(30px)';
+    setTimeout(function(){ el.remove(); }, 380);
+  }, 5200);
+}
+
+/* ---- modal ---- */
+function openModal(title, msg, cta, onConfirm){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML =
+    '<div class="modal-bg" id="modalBg"><div class="modal">' +
+      '<h3>' + title + '</h3>' +
+      '<p>' + msg + '</p>' +
+      '<div class="modal-actions">' +
+        '<button class="a-btn a-btn-out" id="modalCancel">Keep it</button>' +
+        '<button class="a-btn a-btn-danger" id="modalConfirm">' + cta + '</button>' +
+      '</div>' +
+    '</div></div>';
+  document.getElementById('modalCancel').onclick = closeModal;
+  document.getElementById('modalConfirm').onclick = onConfirm;
+  document.getElementById('modalBg').addEventListener('click', function(e){
+    if (e.target.id === 'modalBg') closeModal();
+  });
+}
+function closeModal(){
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+/* ---- reset ---- */
+document.getElementById('resetDemo').addEventListener('click', function(){
+  state.bookings = SEED_BOOKINGS.map(b => ({...b}));
+  state.services = SERVICES.map(s => ({...s}));
+  state.staff = STAFF.map(s => ({...s}));
+  state.selectedService = null;
+  state.selectedTime = null;
+  state.bookStep = 1;
+  state.bookFilter = 'all';
+  state.myTab = 'upcoming';
+  state.search = '';
+  state.editingBookingId = null;
+  clearHold();
+  const nav = NAV[state.role];
+  state.screen = nav[0].id;
+  render();
+  toast('info', 'Demo reset', 'All bookings and services restored to their starting state.');
+});
+
+document.getElementById('notifBtn').addEventListener('click', function(){
+  const pending = visibleBookings().filter(b => b.status === 'pending').length;
+  toast('info', 'Notifications', pending + ' pending booking' + (pending === 1 ? '' : 's') + ' awaiting review.');
+});
+
+/* ============================================================
+   "GOTO" BUTTONS IN THE PROPOSAL
+   ============================================================ */
+document.querySelectorAll('[data-goto]').forEach(btn => {
+  btn.addEventListener('click', function(){
+    const target = btn.dataset.goto;
+    document.getElementById('demo').scrollIntoView({behavior:'smooth', block:'start'});
+
+    if (target === 'race'){
+      state.role = 'customer';
+      document.querySelectorAll('#roleSwitch .role-btn').forEach(b => b.classList.toggle('on', b.dataset.role === 'customer'));
+      state.selectedService = 'deep';
+      state.selectedDate = iso(dayAt(1));
+      state.bookStep = 1;
+
+      const free = TIMES.find(t => isFree(state.selectedDate, t));
+      state.selectedTime = free || null;
+      if (state.selectedTime) startHold();
+      state.screen = 'book';
+      render();
+
+      setTimeout(function(){
+        toast('info', 'Ready to test', 'A slot is selected and held. Now press "Simulate another customer taking this slot".');
+      }, 700);
+    }
+
+    if (target === 'permissions'){
+      state.role = 'staff';
+      document.querySelectorAll('#roleSwitch .role-btn').forEach(b => b.classList.toggle('on', b.dataset.role === 'staff'));
+      state.screen = 'services';
+      render();
+      setTimeout(function(){
+        toast('info', 'Try it', 'Staff tried to open a restricted screen — the API returned a policy denial.');
+      }, 700);
+    }
+  });
+});
+
+/* ============================================================
+   SCROLL FX
+   ============================================================ */
+(function(){
+  var bar = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop || document.body.scrollTop) / max * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  var els = document.querySelectorAll('[data-reveal]');
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {threshold:0.1, rootMargin:'0px 0px -50px 0px'});
+    els.forEach(function(el){ io.observe(el); });
+  } else {
+    els.forEach(function(el){ el.classList.add('in'); });
+  }
+
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(ev){
+      var id = a.getAttribute('href');
+      if (id.length < 2) return;
+      var t = document.querySelector(id);
+      if (!t) return;
+      ev.preventDefault();
+      var y = t.getBoundingClientRect().top + window.pageYOffset - 80;
+      window.scrollTo({top:y, behavior:'smooth'});
+    });
+  });
+})();
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+render();
+</script>
+</body>
+</html>
